@@ -1,0 +1,16 @@
+.envrc
+.claude/*
+.idea/*
+.pi/
+
+# Local generated data
+/data/*
+!/data/.gitkeep
+
+# Frontend export artifacts
+/viz/public/data/spots.json
+
+# Build artifacts
+*.csv
+scraper/scraper
+scraper/export
