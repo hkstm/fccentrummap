@@ -133,14 +133,13 @@ ALTER TABLE articles_raw ADD COLUMN video_id TEXT;
 ```
 
 **Deployment:**
-1. Deploy schema changes (idempotent `ALTER TABLE IF NOT EXISTS`)
+1. Deploy schema changes with idempotent migration logic in code (check existing columns first, then run `ALTER TABLE ... ADD COLUMN ...` only when missing)
 2. Deploy code with transcript download + transcript-based LLM extraction
 3. Backfill existing articles: Re-scrape video-only articles (status=PENDING or manually trigger re-extraction)
 
 **Rollback:**
 - Code rollback: Safe (new columns ignored by old code)
-- Schema rollback: `ALTER TABLE spots DROP COLUMN video_url, timestamp_seconds;` (loses timestamp data but spots remain)
-
+- Schema rollback: run one statement per column (e.g., `ALTER TABLE spots DROP COLUMN video_url;` then `ALTER TABLE spots DROP COLUMN timestamp_seconds;`) or use table-rebuild rollback strategy.
 ## Open Questions
 
 1. **Whisper API fallback:** Should we auto-retry with Whisper if yt-dlp fails, or require manual intervention? Leaning toward manual flag to avoid surprise API costs.
