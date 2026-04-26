@@ -25,6 +25,28 @@ go test ./...
 go build ./...
 ```
 
+## Commit message convention
+
+This repo uses [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
+
+- Format: `<type>[optional scope][!]: <description>`
+- Common types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`
+
+Examples:
+
+```text
+feat(scraper): ingest youtube audio blobs
+fix(repository): keep audio inserts idempotent
+docs: describe git hook setup
+```
+
+Basic validation is enforced via the local `commit-msg` hook in `.githooks/commit-msg`.
+Set it up once per clone:
+
+```bash
+make setup-hooks
+```
+
 ## Notes
 
 - `data/spots.db` is local/generated data
