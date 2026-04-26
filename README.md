@@ -28,6 +28,20 @@ make scrape
 make export
 make build
 make check
+make setup-hooks
+```
+
+## Commit messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
+
+- `<type>[optional scope][!]: <description>`
+- Example: `feat(scraper): add youtube audio acquisition stage`
+
+Enable local commit-message validation hooks with:
+
+```bash
+make setup-hooks
 ```
 
 ## Key spec areas

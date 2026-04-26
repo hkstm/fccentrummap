@@ -25,3 +25,15 @@ Repo-level commands SHALL encapsulate subsystem-specific paths so contributors c
 #### Scenario: Verification commands
 - **WHEN** a contributor runs `make check`
 - **THEN** the command SHALL run the scraper test suite and build checks from the `scraper/` module
+
+### Requirement: Conventional Commit messages are enforced with local hook setup
+The repository SHALL define Conventional Commits as the commit format and provide a setup command for basic local validation.
+Note: this validation is implemented via local Git hooks (`make setup-hooks` -> `.githooks/commit-msg`), can be bypassed with `--no-verify`, and is not currently enforced server-side.
+
+#### Scenario: Contributor configures hooks
+- **WHEN** a contributor runs `make setup-hooks`
+- **THEN** Git SHALL be configured to use repository hooks from `.githooks`
+
+#### Scenario: Commit message validation
+- **WHEN** a contributor creates a commit using local hooks
+- **THEN** the commit message SHALL follow Conventional Commits (`<type>[optional scope][!]: <description>`)
