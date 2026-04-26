@@ -23,7 +23,7 @@ func CrawlArticleURLs() ([]string, error) {
 		Delay:      500 * time.Millisecond,
 	})
 
-	var maxPage int
+	maxPage := 0
 
 	c.OnHTML("[data-max-page]", func(e *colly.HTMLElement) {
 		if mp, err := strconv.Atoi(e.Attr("data-max-page")); err == nil {
@@ -43,6 +43,10 @@ func CrawlArticleURLs() ([]string, error) {
 		return nil, fmt.Errorf("visiting base URL: %w", err)
 	}
 	c.Wait()
+
+	if maxPage <= 0 {
+		return nil, fmt.Errorf("missing or invalid pagination metadata: data-max-page")
+	}
 
 	for page := 2; page <= maxPage; page++ {
 		pageURL := fmt.Sprintf("%spage/%d/", baseURL, page)
@@ -66,9 +70,22 @@ func FetchAndStoreArticles(urls []string, repo *repository.Repository) error {
 
 	var fetchErr error
 
+	c.OnError(func(r *colly.Response, err error) {
+		if fetchErr != nil {
+			return
+		}
+		if r != nil && r.Request != nil {
+			fetchErr = fmt.Errorf("fetching article %s: %w", r.Request.URL, err)
+			return
+		}
+		fetchErr = fmt.Errorf("fetching article: %w", err)
+	})
+
 	c.OnResponse(func(r *colly.Response) {
 		if err := repo.InsertArticleRaw(r.Request.URL.String(), string(r.Body)); err != nil {
-			fetchErr = fmt.Errorf("storing article %s: %w", r.Request.URL, err)
+			if fetchErr == nil {
+				fetchErr = fmt.Errorf("storing article %s: %w", r.Request.URL, err)
+			}
 		}
 	})
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"googlemaps.github.io/maps"
 )
@@ -36,7 +37,10 @@ func New() (*Geocoder, error) {
 func (g *Geocoder) Geocode(name, address string) (*Coordinates, error) {
 	query := address + ", Amsterdam"
 
-	results, err := g.client.Geocode(context.Background(), &maps.GeocodingRequest{
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	results, err := g.client.Geocode(ctx, &maps.GeocodingRequest{
 		Address: query,
 	})
 	if err != nil {
