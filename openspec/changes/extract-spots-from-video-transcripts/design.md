@@ -60,7 +60,7 @@ Example shape:
 - **Timestamp extraction:** the extractor can map each spot directly to a transcript time window
 
 **Prompt structure:**
-```
+```text
 Extract author and recommended spots from this timestamped Dutch video transcript.
 
 Video transcript:

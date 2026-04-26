@@ -20,31 +20,15 @@ The scraper SHALL fetch each discovered article URL and store the full HTML resp
 
 #### Scenario: Article already exists in articles_raw
 - **WHEN** an article URL already exists in `articles_raw`
-- **THEN** the scraper SHALL skip fetching it
+- **THEN** the scraper SHALL skip duplicate insertion/storage for that URL
 
-### Requirement: Parse author name from article HTML
-The scraper SHALL extract the author name from the article title. Article titles follow the pattern "DE SPOTS VAN: [NAME]".
+### Requirement: Parsing and structured extraction are deferred
+Author/spot parsing from article content is intentionally deferred in this archived change and handled by successor transcript-first extraction work.
 
-#### Scenario: Standard title format
-- **WHEN** an article has a title like "DE SPOTS VAN: NIELS OOSTHOEK"
-- **THEN** the extracted author name SHALL be "Niels Oosthoek" (title-cased)
-
-#### Scenario: Non-standard title format
-- **WHEN** an article title does not match the expected pattern
-- **THEN** the article SHALL be marked as `FAILED` in `articles_raw`
-- **AND** the scraper SHALL log an error including the article URL and the actual title that failed to match
-
-### Requirement: Parse spot listings from article HTML
-The scraper SHALL extract spot entries from the `<figcaption>` element. Spots follow the pattern `Spot N: Name, Address`.
-
-#### Scenario: Standard spot format
-- **WHEN** the figcaption contains "Spot 1: Nationale Opera & Ballet, Amstel 3"
-- **THEN** the scraper SHALL extract name "Nationale Opera & Ballet" and address "Amstel 3"
-
-#### Scenario: No spots found
-- **WHEN** the figcaption does not contain any entries matching the spot pattern
-- **THEN** the article SHALL be marked as `FAILED` in `articles_raw`
-- **AND** the scraper SHALL log an error including the article URL and the raw figcaption text that failed to parse
+#### Scenario: Deferred extraction scope
+- **WHEN** contributors read this archived change
+- **THEN** they SHALL treat author/spot parsing as out of scope for this change
+- **AND** they SHALL use `extract-spots-from-video-transcripts` as the successor change for extraction behavior
 
 ### Requirement: Respect rate limiting
 The scraper SHALL add a delay between HTTP requests to fccentrum.nl to avoid overwhelming the server.

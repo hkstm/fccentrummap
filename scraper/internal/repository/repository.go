@@ -154,14 +154,24 @@ func (r *Repository) InsertArticle(articleRawID, authorID int64, title string) (
 }
 
 func (r *Repository) LinkArticleSpots(articleID int64, spotIDs []int64) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("starting article_spots transaction article_id=%d: %w", articleID, err)
+	}
+	defer tx.Rollback()
+
 	for _, spotID := range spotIDs {
-		_, err := r.db.Exec(
+		_, err := tx.Exec(
 			`INSERT OR IGNORE INTO article_spots (article_id, spot_id) VALUES (?, ?)`,
 			articleID, spotID,
 		)
 		if err != nil {
 			return fmt.Errorf("linking article_id=%d spot_id=%d: %w", articleID, spotID, err)
 		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("committing article_spots transaction article_id=%d: %w", articleID, err)
 	}
 	return nil
 }
