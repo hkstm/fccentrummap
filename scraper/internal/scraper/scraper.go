@@ -82,7 +82,14 @@ func FetchAndStoreArticles(urls []string, repo *repository.Repository) error {
 	})
 
 	c.OnResponse(func(r *colly.Response) {
-		if err := repo.InsertArticleRaw(r.Request.URL.String(), string(r.Body)); err != nil {
+		html := string(r.Body)
+		videoID, ok := ExtractYouTubeVideoID(html)
+		var maybeVideoID *string
+		if ok {
+			maybeVideoID = &videoID
+		}
+
+		if err := repo.InsertArticleRaw(r.Request.URL.String(), html, maybeVideoID); err != nil {
 			if fetchErr == nil {
 				fetchErr = fmt.Errorf("storing article %s: %w", r.Request.URL, err)
 			}

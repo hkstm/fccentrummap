@@ -1,17 +1,4 @@
-## Purpose
-
-Define the canonical raw-ingestion behavior of the current FC Centrum scraper pipeline.
-## Requirements
-### Requirement: Discover article URLs from paginated spots category pages
-The scraper SHALL crawl `https://fccentrum.nl/categorie/spots/` and discover article URLs from paginated category pages.
-
-#### Scenario: Crawl category pages
-- **WHEN** the scraper runs the article discovery phase
-- **THEN** it SHALL inspect the base category page, read the available pagination range, and visit each category page in turn
-
-#### Scenario: No duplicate URLs
-- **WHEN** an article link appears more than once during discovery
-- **THEN** the scraper SHALL keep only one copy of that URL in the crawl result
+## MODIFIED Requirements
 
 ### Requirement: Fetch article HTML and store it as raw input
 The scraper SHALL fetch article HTML, store it as raw input, and detect embedded YouTube videos for downstream audio acquisition.
@@ -30,11 +17,10 @@ The scraper SHALL fetch article HTML, store it as raw input, and detect embedded
 - **WHEN** the scraper makes requests to `fccentrum.nl`
 - **THEN** it SHALL apply a delay between requests instead of issuing them as a tight burst
 
-### Requirement: Current scraper run continues into YouTube audio acquisition
+### Requirement: Current scraper run stops after raw-ingestion stage
 The current scraper CLI SHALL continue into YouTube-audio acquisition after crawling and raw HTML storage.
 
 #### Scenario: End of current pipeline
 - **WHEN** `scraper/cmd/scraper` finishes a run
 - **THEN** it SHALL attempt audio acquisition for rows with detected `video_id`
 - **AND** it SHALL persist acquired audio blobs into `article_audio_sources`
-

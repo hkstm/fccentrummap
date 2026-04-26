@@ -1,15 +1,13 @@
 ## Purpose
 
 Define the canonical SQLite schema and repository-layer behavior used by the current scraper and exporter.
-
 ## Requirements
-
 ### Requirement: Initialize schema on startup
 The scraper repository layer SHALL create required tables if they do not already exist.
 
 #### Scenario: Fresh database
 - **WHEN** the program opens a new `data/spots.db`
-- **THEN** it SHALL create `articles_raw`, `authors`, `spots`, `articles`, and `article_spots`
+- **THEN** it SHALL create `articles_raw`, `authors`, `spots`, `articles`, `article_spots`, and `article_audio_sources`
 
 #### Scenario: Existing database
 - **WHEN** the program opens an existing database with the required schema
@@ -47,3 +45,15 @@ The repository SHALL record failure status changes and log the failure reason.
 - **WHEN** article processing fails and the repository updates an `articles_raw` row to `FAILED`
 - **THEN** it SHALL refresh `updated_at`
 - **AND** it SHALL log the article ID, URL, and failure reason
+
+### Requirement: Store per-article audio as SQLite blobs
+The repository SHALL support durable storage of downloaded audio payloads for article-linked videos.
+
+#### Scenario: Insert acquired audio
+- **WHEN** audio is acquired for an article-linked video
+- **THEN** the repository SHALL store an `article_audio_sources` row with `article_raw_id`, `video_id`, `youtube_url`, `audio_format`, `mime_type`, `byte_size`, and `audio_blob`
+
+#### Scenario: Duplicate audio for same article
+- **WHEN** an `article_audio_sources` row already exists for an `article_raw_id`
+- **THEN** the pipeline SHALL skip duplicate insertion unless explicitly forced
+
