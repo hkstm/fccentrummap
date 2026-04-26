@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -40,6 +41,7 @@ func (r *Repository) InitSchema() error {
 		article_raw_id INTEGER PRIMARY KEY AUTOINCREMENT,
 		url TEXT NOT NULL UNIQUE,
 		html TEXT NOT NULL,
+		video_id TEXT,
 		status TEXT NOT NULL DEFAULT 'PENDING',
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -71,18 +73,30 @@ func (r *Repository) InitSchema() error {
 		spot_id INTEGER NOT NULL REFERENCES spots(spot_id),
 		PRIMARY KEY (article_id, spot_id)
 	);
+
+	CREATE TABLE IF NOT EXISTS article_audio_sources (
+		audio_source_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		article_raw_id INTEGER NOT NULL UNIQUE REFERENCES articles_raw(article_raw_id),
+		video_id TEXT NOT NULL,
+		youtube_url TEXT NOT NULL,
+		audio_format TEXT NOT NULL,
+		mime_type TEXT NOT NULL,
+		audio_blob BLOB NOT NULL,
+		byte_size INTEGER NOT NULL,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
 	`
-	_, err := r.db.Exec(schema)
-	if err != nil {
+	if _, err := r.db.Exec(schema); err != nil {
 		return fmt.Errorf("initializing schema: %w", err)
 	}
+
 	return nil
 }
 
-func (r *Repository) InsertArticleRaw(url, html string) error {
+func (r *Repository) InsertArticleRaw(url, html string, videoID *string) error {
 	_, err := r.db.Exec(
-		`INSERT OR IGNORE INTO articles_raw (url, html) VALUES (?, ?)`,
-		url, html,
+		`INSERT OR IGNORE INTO articles_raw (url, html, video_id) VALUES (?, ?, ?)`,
+		url, html, videoID,
 	)
 	if err != nil {
 		return fmt.Errorf("inserting article_raw url=%s: %w", url, err)
@@ -92,7 +106,7 @@ func (r *Repository) InsertArticleRaw(url, html string) error {
 
 func (r *Repository) GetPendingArticles() ([]models.ArticleRaw, error) {
 	rows, err := r.db.Query(
-		`SELECT article_raw_id, url, html FROM articles_raw WHERE status = 'PENDING'`,
+		`SELECT article_raw_id, url, html, video_id FROM articles_raw WHERE status = 'PENDING'`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("querying pending articles: %w", err)
@@ -102,12 +116,70 @@ func (r *Repository) GetPendingArticles() ([]models.ArticleRaw, error) {
 	var articles []models.ArticleRaw
 	for rows.Next() {
 		var a models.ArticleRaw
-		if err := rows.Scan(&a.ArticleRawID, &a.URL, &a.HTML); err != nil {
+		if err := rows.Scan(&a.ArticleRawID, &a.URL, &a.HTML, &a.VideoID); err != nil {
 			return nil, fmt.Errorf("scanning article_raw row: %w", err)
 		}
 		articles = append(articles, a)
 	}
 	return articles, rows.Err()
+}
+
+func (r *Repository) ArticleAudioSourceExists(articleRawID int64) (bool, error) {
+	var exists bool
+	err := r.db.QueryRow(
+		`SELECT EXISTS(SELECT 1 FROM article_audio_sources WHERE article_raw_id = ?)`,
+		articleRawID,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("checking audio source existence article_raw_id=%d: %w", articleRawID, err)
+	}
+	return exists, nil
+}
+
+func (r *Repository) InsertArticleAudioSource(src models.ArticleAudioSource) error {
+	_, err := r.db.Exec(
+		`INSERT OR IGNORE INTO article_audio_sources
+			(article_raw_id, video_id, youtube_url, audio_format, mime_type, audio_blob, byte_size)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		src.ArticleRawID,
+		src.VideoID,
+		src.YouTubeURL,
+		src.AudioFormat,
+		src.MIMEType,
+		src.AudioBlob,
+		src.ByteSize,
+	)
+	if err != nil {
+		return fmt.Errorf("inserting article_audio_source article_raw_id=%d: %w", src.ArticleRawID, err)
+	}
+	return nil
+}
+
+func (r *Repository) GetArticleAudioSource(articleRawID int64) (*models.ArticleAudioSource, error) {
+	var src models.ArticleAudioSource
+	err := r.db.QueryRow(
+		`SELECT audio_source_id, article_raw_id, video_id, youtube_url, audio_format, mime_type, audio_blob, byte_size, created_at
+		 FROM article_audio_sources
+		 WHERE article_raw_id = ?`,
+		articleRawID,
+	).Scan(
+		&src.AudioSourceID,
+		&src.ArticleRawID,
+		&src.VideoID,
+		&src.YouTubeURL,
+		&src.AudioFormat,
+		&src.MIMEType,
+		&src.AudioBlob,
+		&src.ByteSize,
+		&src.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("querying article_audio_source article_raw_id=%d: %w", articleRawID, err)
+	}
+	return &src, nil
 }
 
 func (r *Repository) InsertAuthor(name string) (int64, error) {

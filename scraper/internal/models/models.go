@@ -6,9 +6,22 @@ type ArticleRaw struct {
 	ArticleRawID int64
 	URL          string
 	HTML         string
+	VideoID      *string
 	Status       string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+}
+
+type ArticleAudioSource struct {
+	AudioSourceID int64
+	ArticleRawID  int64
+	VideoID       string
+	YouTubeURL    string
+	AudioFormat   string
+	MIMEType      string
+	AudioBlob     []byte
+	ByteSize      int64
+	CreatedAt     time.Time
 }
 
 type Author struct {
