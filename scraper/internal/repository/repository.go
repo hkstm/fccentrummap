@@ -1,26 +1,31 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/hkstm/fccentrummap/internal/models"
-	_ "modernc.org/sqlite"
+	sqlite "modernc.org/sqlite"
 )
 
 type Repository struct {
 	db *sql.DB
 }
 
+func init() {
+	sqlite.RegisterConnectionHook(func(conn sqlite.ExecQuerierContext, _ string) error {
+		_, err := conn.ExecContext(context.Background(), "PRAGMA foreign_keys = ON", nil)
+		return err
+	})
+}
+
 func New(dbPath string) (*Repository, error) {
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
-	}
-	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		return nil, fmt.Errorf("enabling foreign keys: %w", err)
 	}
 	return &Repository{db: db}, nil
 }
