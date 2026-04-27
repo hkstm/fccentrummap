@@ -21,9 +21,20 @@ make check
 cd scraper
 go run ./cmd/scraper -db ../data/spots.db
 go run ./cmd/export -db ../data/spots.db -out ../viz/public/data/spots.json
+
+go run ./cmd/transcribe-audio --db-path ../data/spots.db --audio-source-id 1 --language nl
+go run ./cmd/transcribe-audio --db-path ../data/spots.db --language nl
+
+go run ./cmd/export-audio --db-path ../data/spots.db --audio-source-id 1 --out-dir ../data
+go run ./cmd/export-transcription --db-path ../data/spots.db --transcription-id 1 --out-dir ../data
+
 go test ./...
 go build ./...
 ```
+
+## Environment variables
+
+- `MURMEL_API_KEY` (required by `cmd/transcribe-audio`; sent as `X-API-Key`)
 
 ## Commit message convention
 

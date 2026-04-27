@@ -24,6 +24,18 @@ type ArticleAudioSource struct {
 	CreatedAt     time.Time
 }
 
+type ArticleAudioTranscription struct {
+	TranscriptionID  int64
+	AudioSourceID    int64
+	Provider         string
+	Language         string
+	HTTPStatus       int
+	ResponseJSON     string
+	ResponseByteSize int64
+	ErrorMessage     *string
+	CreatedAt        time.Time
+}
+
 type Author struct {
 	AuthorID int64
 	Name     string

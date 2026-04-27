@@ -85,6 +85,19 @@ func (r *Repository) InitSchema() error {
 		byte_size INTEGER NOT NULL,
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
+
+	CREATE TABLE IF NOT EXISTS article_audio_transcriptions (
+		transcription_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		audio_source_id INTEGER NOT NULL REFERENCES article_audio_sources(audio_source_id),
+		provider TEXT NOT NULL,
+		language TEXT NOT NULL,
+		http_status INTEGER NOT NULL,
+		response_json TEXT NOT NULL CHECK(json_valid(response_json)),
+		response_byte_size INTEGER NOT NULL,
+		error_message TEXT,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(audio_source_id, provider, language)
+	);
 	`
 	if _, err := r.db.Exec(schema); err != nil {
 		return fmt.Errorf("initializing schema: %w", err)
@@ -180,6 +193,119 @@ func (r *Repository) GetArticleAudioSource(articleRawID int64) (*models.ArticleA
 		return nil, fmt.Errorf("querying article_audio_source article_raw_id=%d: %w", articleRawID, err)
 	}
 	return &src, nil
+}
+
+func (r *Repository) GetArticleAudioSourceByID(audioSourceID int64) (*models.ArticleAudioSource, error) {
+	var src models.ArticleAudioSource
+	err := r.db.QueryRow(
+		`SELECT audio_source_id, article_raw_id, video_id, youtube_url, audio_format, mime_type, audio_blob, byte_size, created_at
+		 FROM article_audio_sources
+		 WHERE audio_source_id = ?`,
+		audioSourceID,
+	).Scan(
+		&src.AudioSourceID,
+		&src.ArticleRawID,
+		&src.VideoID,
+		&src.YouTubeURL,
+		&src.AudioFormat,
+		&src.MIMEType,
+		&src.AudioBlob,
+		&src.ByteSize,
+		&src.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("querying article_audio_source audio_source_id=%d: %w", audioSourceID, err)
+	}
+	return &src, nil
+}
+
+func (r *Repository) GetLatestArticleAudioSource() (*models.ArticleAudioSource, error) {
+	var src models.ArticleAudioSource
+	err := r.db.QueryRow(
+		`SELECT audio_source_id, article_raw_id, video_id, youtube_url, audio_format, mime_type, audio_blob, byte_size, created_at
+		 FROM article_audio_sources
+		 WHERE audio_blob IS NOT NULL AND length(audio_blob) > 0
+		 ORDER BY audio_source_id DESC
+		 LIMIT 1`,
+	).Scan(
+		&src.AudioSourceID,
+		&src.ArticleRawID,
+		&src.VideoID,
+		&src.YouTubeURL,
+		&src.AudioFormat,
+		&src.MIMEType,
+		&src.AudioBlob,
+		&src.ByteSize,
+		&src.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("querying latest article_audio_source: %w", err)
+	}
+	return &src, nil
+}
+
+func (r *Repository) UpsertArticleAudioTranscription(t models.ArticleAudioTranscription) (int64, error) {
+	var transcriptionID int64
+	err := r.db.QueryRow(
+		`INSERT INTO article_audio_transcriptions
+			(audio_source_id, provider, language, http_status, response_json, response_byte_size, error_message)
+		 VALUES (?, ?, ?, ?, json(?), ?, ?)
+		 ON CONFLICT(audio_source_id, provider, language) DO UPDATE SET
+			http_status = excluded.http_status,
+			response_json = excluded.response_json,
+			response_byte_size = excluded.response_byte_size,
+			error_message = excluded.error_message,
+			created_at = CURRENT_TIMESTAMP
+		 RETURNING transcription_id`,
+		t.AudioSourceID,
+		t.Provider,
+		t.Language,
+		t.HTTPStatus,
+		t.ResponseJSON,
+		t.ResponseByteSize,
+		t.ErrorMessage,
+	).Scan(&transcriptionID)
+	if err != nil {
+		return 0, fmt.Errorf("upserting article_audio_transcription audio_source_id=%d provider=%s language=%s: %w", t.AudioSourceID, t.Provider, t.Language, err)
+	}
+	return transcriptionID, nil
+}
+
+func (r *Repository) GetArticleAudioTranscriptionByID(transcriptionID int64) (*models.ArticleAudioTranscription, error) {
+	var t models.ArticleAudioTranscription
+	var errMsg sql.NullString
+	err := r.db.QueryRow(
+		`SELECT transcription_id, audio_source_id, provider, language, http_status, response_json, response_byte_size, error_message, created_at
+		 FROM article_audio_transcriptions
+		 WHERE transcription_id = ?`,
+		transcriptionID,
+	).Scan(
+		&t.TranscriptionID,
+		&t.AudioSourceID,
+		&t.Provider,
+		&t.Language,
+		&t.HTTPStatus,
+		&t.ResponseJSON,
+		&t.ResponseByteSize,
+		&errMsg,
+		&t.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("querying article_audio_transcription transcription_id=%d: %w", transcriptionID, err)
+	}
+	if errMsg.Valid {
+		t.ErrorMessage = &errMsg.String
+	}
+	return &t, nil
 }
 
 func (r *Repository) InsertAuthor(name string) (int64, error) {
