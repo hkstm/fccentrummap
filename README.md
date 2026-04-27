@@ -31,6 +31,25 @@ make check
 make setup-hooks
 ```
 
+## Audio transcription CLI helpers
+
+```bash
+# Required for transcription requests
+export MURMEL_API_KEY="..."
+
+# Transcribe explicit audio source row
+cd scraper && go run ./cmd/transcribe-audio --db-path ../data/spots.db --audio-source-id 1 --language nl
+
+# Transcribe latest available audio source row
+cd scraper && go run ./cmd/transcribe-audio --db-path ../data/spots.db --language nl
+
+# Export source audio by id to data/
+cd scraper && go run ./cmd/export-audio --db-path ../data/spots.db --audio-source-id 1 --out-dir ../data
+
+# Export stored transcription JSON by id to data/
+cd scraper && go run ./cmd/export-transcription --db-path ../data/spots.db --transcription-id 1 --out-dir ../data
+```
+
 ## Commit messages
 
 Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
