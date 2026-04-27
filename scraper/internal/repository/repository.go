@@ -98,6 +98,30 @@ func (r *Repository) InitSchema() error {
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		UNIQUE(audio_source_id, provider, language)
 	);
+
+	CREATE TABLE IF NOT EXISTS article_text_extractions (
+		extraction_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		article_raw_id INTEGER NOT NULL UNIQUE REFERENCES articles_raw(article_raw_id) ON DELETE CASCADE,
+		extraction_mode TEXT NOT NULL,
+		status TEXT NOT NULL CHECK(status IN ('matched', 'no_match', 'error')),
+		matched_count INTEGER NOT NULL DEFAULT 0,
+		error_message TEXT,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS article_text_contents (
+		text_content_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		extraction_id INTEGER NOT NULL REFERENCES article_text_extractions(extraction_id) ON DELETE CASCADE,
+		article_raw_id INTEGER NOT NULL REFERENCES articles_raw(article_raw_id) ON DELETE CASCADE,
+		source_type TEXT NOT NULL,
+		content TEXT NOT NULL,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_article_text_contents_article_raw_id
+		ON article_text_contents(article_raw_id);
 	`
 	if _, err := r.db.Exec(schema); err != nil {
 		return fmt.Errorf("initializing schema: %w", err)
@@ -115,6 +139,152 @@ func (r *Repository) InsertArticleRaw(url, html string, videoID *string) error {
 		return fmt.Errorf("inserting article_raw url=%s: %w", url, err)
 	}
 	return nil
+}
+
+func (r *Repository) GetArticleRawByURL(url string) (*models.ArticleRaw, error) {
+	var a models.ArticleRaw
+	err := r.db.QueryRow(
+		`SELECT article_raw_id, url, html, video_id, status, created_at, updated_at
+		 FROM articles_raw
+		 WHERE url = ?`,
+		url,
+	).Scan(&a.ArticleRawID, &a.URL, &a.HTML, &a.VideoID, &a.Status, &a.CreatedAt, &a.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("querying article_raw by url=%s: %w", url, err)
+	}
+	return &a, nil
+}
+
+func (r *Repository) ReplaceArticleTextExtraction(result models.ArticleTextExtractionResult) error {
+	contentsLen := len(result.Contents)
+	switch result.Status {
+	case models.ArticleTextExtractionStatusMatched:
+		if result.MatchedCount <= 0 || contentsLen <= 0 || result.MatchedCount != contentsLen {
+			return fmt.Errorf("invalid matched extraction payload article_raw_id=%d status=%s matched_count=%d contents=%d", result.ArticleRawID, result.Status, result.MatchedCount, contentsLen)
+		}
+	case models.ArticleTextExtractionStatusNoMatch, models.ArticleTextExtractionStatusError:
+		if result.MatchedCount != 0 || contentsLen != 0 {
+			return fmt.Errorf("invalid non-matched extraction payload article_raw_id=%d status=%s matched_count=%d contents=%d", result.ArticleRawID, result.Status, result.MatchedCount, contentsLen)
+		}
+	default:
+		return fmt.Errorf("invalid extraction status article_raw_id=%d status=%s matched_count=%d contents=%d", result.ArticleRawID, result.Status, result.MatchedCount, contentsLen)
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("starting article text extraction transaction article_raw_id=%d: %w", result.ArticleRawID, err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`DELETE FROM article_text_contents WHERE article_raw_id = ?`, result.ArticleRawID); err != nil {
+		return fmt.Errorf("deleting article_text_contents article_raw_id=%d: %w", result.ArticleRawID, err)
+	}
+	if _, err := tx.Exec(`DELETE FROM article_text_extractions WHERE article_raw_id = ?`, result.ArticleRawID); err != nil {
+		return fmt.Errorf("deleting article_text_extractions article_raw_id=%d: %w", result.ArticleRawID, err)
+	}
+
+	var extractionID int64
+	err = tx.QueryRow(
+		`INSERT INTO article_text_extractions (article_raw_id, extraction_mode, status, matched_count, error_message)
+		 VALUES (?, ?, ?, ?, ?)
+		 RETURNING extraction_id`,
+		result.ArticleRawID,
+		result.ExtractionMode,
+		result.Status,
+		result.MatchedCount,
+		result.ErrorMessage,
+	).Scan(&extractionID)
+	if err != nil {
+		return fmt.Errorf("inserting article_text_extractions article_raw_id=%d: %w", result.ArticleRawID, err)
+	}
+
+	for _, content := range result.Contents {
+		_, err := tx.Exec(
+			`INSERT INTO article_text_contents (extraction_id, article_raw_id, source_type, content)
+			 VALUES (?, ?, ?, ?)`,
+			extractionID,
+			result.ArticleRawID,
+			content.SourceType,
+			content.Content,
+		)
+		if err != nil {
+			return fmt.Errorf("inserting article_text_contents article_raw_id=%d source_type=%s: %w", result.ArticleRawID, content.SourceType, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("committing article text extraction transaction article_raw_id=%d: %w", result.ArticleRawID, err)
+	}
+
+	return nil
+}
+
+func (r *Repository) GetArticleTextExtraction(articleRawID int64) (*models.ArticleTextExtraction, error) {
+	var row models.ArticleTextExtraction
+	var errMsg sql.NullString
+	err := r.db.QueryRow(
+		`SELECT extraction_id, article_raw_id, extraction_mode, status, matched_count, error_message, created_at, updated_at
+		 FROM article_text_extractions
+		 WHERE article_raw_id = ?`,
+		articleRawID,
+	).Scan(
+		&row.ExtractionID,
+		&row.ArticleRawID,
+		&row.ExtractionMode,
+		&row.Status,
+		&row.MatchedCount,
+		&errMsg,
+		&row.CreatedAt,
+		&row.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("querying article_text_extractions article_raw_id=%d: %w", articleRawID, err)
+	}
+	if errMsg.Valid {
+		row.ErrorMessage = &errMsg.String
+	}
+	return &row, nil
+}
+
+func (r *Repository) ListArticleTextContents(articleRawID int64) ([]models.ArticleTextContent, error) {
+	rows, err := r.db.Query(
+		`SELECT text_content_id, extraction_id, article_raw_id, source_type, content, created_at, updated_at
+		 FROM article_text_contents
+		 WHERE article_raw_id = ?
+		 ORDER BY text_content_id ASC`,
+		articleRawID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying article_text_contents article_raw_id=%d: %w", articleRawID, err)
+	}
+	defer rows.Close()
+
+	var results []models.ArticleTextContent
+	for rows.Next() {
+		var row models.ArticleTextContent
+		if err := rows.Scan(
+			&row.TextContentID,
+			&row.ExtractionID,
+			&row.ArticleRawID,
+			&row.SourceType,
+			&row.Content,
+			&row.CreatedAt,
+			&row.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning article_text_contents row article_raw_id=%d: %w", articleRawID, err)
+		}
+		results = append(results, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating article_text_contents rows article_raw_id=%d: %w", articleRawID, err)
+	}
+	return results, nil
 }
 
 func (r *Repository) GetPendingArticles() ([]models.ArticleRaw, error) {
@@ -135,6 +305,37 @@ func (r *Repository) GetPendingArticles() ([]models.ArticleRaw, error) {
 		articles = append(articles, a)
 	}
 	return articles, rows.Err()
+}
+
+func (r *Repository) ListRecentArticles(limit int) ([]models.ArticleRaw, error) {
+	if limit <= 0 {
+		return []models.ArticleRaw{}, nil
+	}
+
+	rows, err := r.db.Query(
+		`SELECT article_raw_id, url, html, video_id, status, created_at, updated_at
+		 FROM articles_raw
+		 ORDER BY article_raw_id DESC
+		 LIMIT ?`,
+		limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying recent articles limit=%d: %w", limit, err)
+	}
+	defer rows.Close()
+
+	articles := make([]models.ArticleRaw, 0, limit)
+	for rows.Next() {
+		var a models.ArticleRaw
+		if err := rows.Scan(&a.ArticleRawID, &a.URL, &a.HTML, &a.VideoID, &a.Status, &a.CreatedAt, &a.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scanning recent article row: %w", err)
+		}
+		articles = append(articles, a)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating recent article rows: %w", err)
+	}
+	return articles, nil
 }
 
 func (r *Repository) ArticleAudioSourceExists(articleRawID int64) (bool, error) {
