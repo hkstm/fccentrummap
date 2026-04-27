@@ -30,6 +30,8 @@ func BuildDutchPrompt(input PromptInput) (string, error) {
 	b.WriteString("- Neem géén plekken op die alleen als achtergrond, route of context worden genoemd.\n")
 	b.WriteString("- Straat- en gebiedsnamen alleen opnemen als ze expliciet als spot worden gepresenteerd.\n")
 	b.WriteString("- Als meerdere namen naar dezelfde spot verwijzen (bijv. Stopera en Nationaal Ballet), geef één canonieke spot terug.\n")
+	b.WriteString("- Als artikel en transcript verschillend spellen, volg de spelling uit cleaned_article als canoniek.\n")
+	b.WriteString("- Corrigeer transcript-typo's alleen naar een vorm die letterlijk in cleaned_article staat; verzin geen nieuwe varianten.\n")
 	b.WriteString("- Neem een spot alleen op als transcript_sentences expliciet bewijs levert en kies de best passende sentenceStartTimestamp.\n")
 	b.WriteString("- Gebruik schone pleknaamwaarden zonder voorvoegsels zoals 'place:'.\n")
 	b.WriteString("\n")
