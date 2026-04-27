@@ -6,18 +6,21 @@ import (
 )
 
 func TestBuildDutchPromptContainsRequiredGuidance(t *testing.T) {
-	prompt, err := BuildDutchPrompt([]SentenceUnit{{Text: "We lopen door De Pijp", Start: 12.5}})
+	prompt, err := BuildDutchPrompt(PromptInput{
+		CleanedArticleText: "Niels laat de Stopera en De Pijp zien als favoriete spots.",
+		Sentences:          []SentenceUnit{{Text: "We lopen door De Pijp", Start: 12.5}},
+	})
 	if err != nil {
 		t.Fatalf("BuildDutchPrompt() error = %v", err)
 	}
 
 	expectedSnippets := []string{
 		"De spots van",
-		"Amsterdam",
-		"2 tot 7",
-		"canonieke spot",
-		"minimaal 2 verschillende zinnen",
-		"zonder voorvoegsels",
+		"[cleaned_article]",
+		"[transcript_sentences]",
+		"primaire bron",
+		"transcriptbewijs",
+		"presenter_name",
 		"place",
 		"sentenceStartTimestamp",
 		"submit_spots",

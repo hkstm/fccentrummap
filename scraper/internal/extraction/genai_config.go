@@ -11,10 +11,15 @@ func GenerateContentConfig() *gogenai.GenerateContentConfig {
 		Tools: []*gogenai.Tool{{
 			FunctionDeclarations: []*gogenai.FunctionDeclaration{{
 				Name:        SubmitSpotsFunctionName,
-				Description: "Return extracted Amsterdam-area spots from transcript evidence.",
+				Description: "Return extracted Amsterdam-area spots using cleaned article as primary source and transcript evidence for timestamps.",
 				Parameters: &gogenai.Schema{
 					Type: gogenai.TypeObject,
 					Properties: map[string]*gogenai.Schema{
+						"presenter_name": {
+							Type:        gogenai.TypeString,
+							Nullable:    gogenai.Ptr(true),
+							Description: "Optional primary presenter/person for the extraction run.",
+						},
 						"spots": {
 							Type: gogenai.TypeArray,
 							Items: &gogenai.Schema{

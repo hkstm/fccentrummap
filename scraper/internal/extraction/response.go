@@ -12,7 +12,8 @@ type Candidate struct {
 }
 
 type ParsedResponse struct {
-	Spots []Candidate `json:"spots"`
+	PresenterName *string     `json:"presenter_name"`
+	Spots         []Candidate `json:"spots"`
 }
 
 type generateContentEnvelope struct {
@@ -59,12 +60,23 @@ func extractParsedResponse(rawBody []byte) (*ParsedResponse, error) {
 			if part.FunctionCall == nil {
 				continue
 			}
+			if part.FunctionCall.Name != SubmitSpotsFunctionName {
+				continue
+			}
 			if len(part.FunctionCall.Args) == 0 {
 				return nil, fmt.Errorf("model function call args are empty")
 			}
 			var parsed ParsedResponse
 			if err := json.Unmarshal(part.FunctionCall.Args, &parsed); err != nil {
 				return nil, fmt.Errorf("model function call args are not valid extraction JSON: %w", err)
+			}
+			if parsed.PresenterName != nil {
+				trimmed := strings.TrimSpace(*parsed.PresenterName)
+				if trimmed == "" {
+					parsed.PresenterName = nil
+				} else {
+					parsed.PresenterName = &trimmed
+				}
 			}
 			return &parsed, nil
 		}

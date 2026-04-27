@@ -1,0 +1,22 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "functionCall": {
+              "name": "submit_spots",
+              "args": {
+                "presenter_name": "Niels Oosthoek",
+                "spots": [
+                  {"place": "Stopera", "sentenceStartTimestamp": 14.5},
+                  {"place": "Oosterpark", "sentenceStartTimestamp": 33.2}
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
