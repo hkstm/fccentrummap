@@ -11,14 +11,21 @@ func DefaultDBPath() string {
 	if fromEnv := strings.TrimSpace(os.Getenv("SPOTS_DB_PATH")); fromEnv != "" {
 		return filepath.Clean(fromEnv)
 	}
+	return filepath.Join(defaultDataDir(), "spots.db")
+}
 
+func DefaultDataDir() string {
+	return defaultDataDir()
+}
+
+func defaultDataDir() string {
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {
-		return filepath.Clean("../data/spots.db")
+		return filepath.Clean("../data")
 	}
 
 	scraperRoot := filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", ".."))
-	return filepath.Join(scraperRoot, "..", "data", "spots.db")
+	return filepath.Join(scraperRoot, "..", "data")
 }
 
 func SafeExt(ext string) string {

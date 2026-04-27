@@ -28,6 +28,9 @@ go run ./cmd/transcribe-audio --db-path ../data/spots.db --language nl
 go run ./cmd/export-audio --db-path ../data/spots.db --audio-source-id 1 --out-dir ../data
 go run ./cmd/export-transcription --db-path ../data/spots.db --transcription-id 1 --out-dir ../data
 
+go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --transcription-id 1 --out-dir ../data
+go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --use-latest --out-dir ../data
+
 go test ./...
 go build ./...
 ```

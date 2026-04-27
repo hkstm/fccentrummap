@@ -278,14 +278,29 @@ func (r *Repository) UpsertArticleAudioTranscription(t models.ArticleAudioTransc
 }
 
 func (r *Repository) GetArticleAudioTranscriptionByID(transcriptionID int64) (*models.ArticleAudioTranscription, error) {
-	var t models.ArticleAudioTranscription
-	var errMsg sql.NullString
-	err := r.db.QueryRow(
+	return r.getArticleAudioTranscription(
 		`SELECT transcription_id, audio_source_id, provider, language, http_status, response_json, response_byte_size, error_message, created_at
 		 FROM article_audio_transcriptions
 		 WHERE transcription_id = ?`,
+		fmt.Sprintf("querying article_audio_transcription transcription_id=%d", transcriptionID),
 		transcriptionID,
-	).Scan(
+	)
+}
+
+func (r *Repository) GetLatestArticleAudioTranscription() (*models.ArticleAudioTranscription, error) {
+	return r.getArticleAudioTranscription(
+		`SELECT transcription_id, audio_source_id, provider, language, http_status, response_json, response_byte_size, error_message, created_at
+		 FROM article_audio_transcriptions
+		 ORDER BY transcription_id DESC
+		 LIMIT 1`,
+		"querying latest article_audio_transcription",
+	)
+}
+
+func (r *Repository) getArticleAudioTranscription(query string, errLabel string, args ...any) (*models.ArticleAudioTranscription, error) {
+	var t models.ArticleAudioTranscription
+	var errMsg sql.NullString
+	err := r.db.QueryRow(query, args...).Scan(
 		&t.TranscriptionID,
 		&t.AudioSourceID,
 		&t.Provider,
@@ -300,7 +315,7 @@ func (r *Repository) GetArticleAudioTranscriptionByID(transcriptionID int64) (*m
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("querying article_audio_transcription transcription_id=%d: %w", transcriptionID, err)
+		return nil, fmt.Errorf("%s: %w", errLabel, err)
 	}
 	if errMsg.Valid {
 		t.ErrorMessage = &errMsg.String

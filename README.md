@@ -48,6 +48,12 @@ cd scraper && go run ./cmd/export-audio --db-path ../data/spots.db --audio-sourc
 
 # Export stored transcription JSON by id to data/
 cd scraper && go run ./cmd/export-transcription --db-path ../data/spots.db --transcription-id 1 --out-dir ../data
+
+# Dry-run extraction for an explicit transcription row
+cd scraper && go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --transcription-id 1 --out-dir ../data
+
+# Dry-run extraction for the latest transcription row (must be explicit)
+cd scraper && go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --use-latest --out-dir ../data
 ```
 
 ## Commit messages
