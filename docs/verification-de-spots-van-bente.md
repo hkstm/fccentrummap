@@ -46,6 +46,14 @@ Raw response function call args contained:
   - `Dream Unit` @ `424.28`
   - `Bugazzi` @ `430.22`
 
+Name consistency note:
+
+- `Bugazzi` appears only in the model output.
+- `cleaned_article` uses `Fugazzi`.
+- `transcript` uses `Fugazi` (e.g. segment start `430.22`, and repeated at `439.0`).
+- Most likely cause: model typo/normalization drift while reconciling article+transcript spelling variants.
+- Canonical spelling should follow the article (`Fugazzi`).
+
 Validation checks passed:
 
 - Every extracted spot includes `sentenceStartTimestamp`
