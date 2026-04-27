@@ -116,6 +116,26 @@ type ExportSpot struct {
 	Authors []string `json:"authors"`
 }
 
+type SpotExtractionRecordInput struct {
+	ArticleRawID       int64
+	TranscriptionID    int64
+	PresenterName      *string
+	PromptText         string
+	RawResponseJSON    string
+	ParsedResponseJSON string
+}
+
+type SpotExtractionRecord struct {
+	SpotExtractionID   int64
+	ArticleRawID       int64
+	TranscriptionID    int64
+	PresenterName      *string
+	PromptText         string
+	RawResponseJSON    string
+	ParsedResponseJSON string
+	CreatedAt          time.Time
+}
+
 type ExportData struct {
 	Authors []string     `json:"authors"`
 	Spots   []ExportSpot `json:"spots"`

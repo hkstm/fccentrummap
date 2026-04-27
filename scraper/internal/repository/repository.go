@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"time"
 
 	"github.com/hkstm/fccentrummap/internal/models"
@@ -14,6 +15,28 @@ import (
 
 type Repository struct {
 	db *sql.DB
+}
+
+const articleSpotExtractionsDDLTemplate = `
+	%s article_spot_extractions (
+		spot_extraction_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		article_raw_id INTEGER NOT NULL REFERENCES articles_raw(article_raw_id) ON DELETE CASCADE,
+		transcription_id INTEGER NOT NULL REFERENCES article_audio_transcriptions(transcription_id) ON DELETE CASCADE,
+		presenter_name TEXT,
+		prompt_text TEXT NOT NULL,
+		raw_response_json TEXT NOT NULL CHECK(json_valid(raw_response_json)),
+		parsed_response_json TEXT NOT NULL CHECK(json_valid(parsed_response_json)),
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_article_spot_extractions_article_raw_id
+		ON article_spot_extractions(article_raw_id);
+`
+
+var backupSuffixRegexp = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+
+func articleSpotExtractionsDDL(createTableClause string) string {
+	return fmt.Sprintf(articleSpotExtractionsDDLTemplate, createTableClause)
 }
 
 func init() {
@@ -36,7 +59,7 @@ func (r *Repository) Close() error {
 }
 
 func (r *Repository) InitSchema() error {
-	schema := `
+	schema := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS articles_raw (
 		article_raw_id INTEGER PRIMARY KEY AUTOINCREMENT,
 		url TEXT NOT NULL UNIQUE,
@@ -122,12 +145,57 @@ func (r *Repository) InitSchema() error {
 
 	CREATE INDEX IF NOT EXISTS idx_article_text_contents_article_raw_id
 		ON article_text_contents(article_raw_id);
-	`
+
+	%s
+	`, articleSpotExtractionsDDL("CREATE TABLE IF NOT EXISTS"))
 	if _, err := r.db.Exec(schema); err != nil {
 		return fmt.Errorf("initializing schema: %w", err)
 	}
 
 	return nil
+}
+
+func (r *Repository) ResetSpotExtractionStorageWithBackup(backupSuffix string) (string, error) {
+	if backupSuffix == "" {
+		backupSuffix = time.Now().UTC().Format("20060102T150405Z")
+	}
+	if !backupSuffixRegexp.MatchString(backupSuffix) {
+		return "", fmt.Errorf("invalid backup suffix %q: must match %s", backupSuffix, backupSuffixRegexp.String())
+	}
+	backupTableName := fmt.Sprintf("article_spot_extractions_backup_%s", backupSuffix)
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return "", fmt.Errorf("starting extraction storage reset transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`DROP TABLE IF EXISTS ` + backupTableName); err != nil {
+		return "", fmt.Errorf("dropping existing backup table %s: %w", backupTableName, err)
+	}
+
+	var existingTableName string
+	err = tx.QueryRow(`SELECT name FROM sqlite_master WHERE type='table' AND name='article_spot_extractions'`).Scan(&existingTableName)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		backupTableName = ""
+	case err != nil:
+		return "", fmt.Errorf("checking existing extraction table: %w", err)
+	default:
+		if _, err := tx.Exec(`ALTER TABLE article_spot_extractions RENAME TO ` + backupTableName); err != nil {
+			return "", fmt.Errorf("renaming extraction table to backup %s: %w", backupTableName, err)
+		}
+	}
+
+	if _, err := tx.Exec(articleSpotExtractionsDDL("CREATE TABLE")); err != nil {
+		return "", fmt.Errorf("creating reset extraction storage schema: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return "", fmt.Errorf("committing extraction storage reset transaction: %w", err)
+	}
+
+	return backupTableName, nil
 }
 
 func (r *Repository) InsertArticleRaw(url, html string, videoID *string) error {
@@ -154,6 +222,23 @@ func (r *Repository) GetArticleRawByURL(url string) (*models.ArticleRaw, error) 
 			return nil, nil
 		}
 		return nil, fmt.Errorf("querying article_raw by url=%s: %w", url, err)
+	}
+	return &a, nil
+}
+
+func (r *Repository) GetArticleRawByID(articleRawID int64) (*models.ArticleRaw, error) {
+	var a models.ArticleRaw
+	err := r.db.QueryRow(
+		`SELECT article_raw_id, url, html, video_id, status, created_at, updated_at
+		 FROM articles_raw
+		 WHERE article_raw_id = ?`,
+		articleRawID,
+	).Scan(&a.ArticleRawID, &a.URL, &a.HTML, &a.VideoID, &a.Status, &a.CreatedAt, &a.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("querying article_raw by id=%d: %w", articleRawID, err)
 	}
 	return &a, nil
 }
@@ -496,6 +581,71 @@ func (r *Repository) GetLatestArticleAudioTranscription() (*models.ArticleAudioT
 		 LIMIT 1`,
 		"querying latest article_audio_transcription",
 	)
+}
+
+func (r *Repository) GetLatestArticleAudioTranscriptionByURL(url string) (*models.ArticleAudioTranscription, error) {
+	return r.getArticleAudioTranscription(
+		`SELECT t.transcription_id, t.audio_source_id, t.provider, t.language, t.http_status, t.response_json, t.response_byte_size, t.error_message, t.created_at
+		 FROM article_audio_transcriptions t
+		 JOIN article_audio_sources s ON s.audio_source_id = t.audio_source_id
+		 JOIN articles_raw ar ON ar.article_raw_id = s.article_raw_id
+		 WHERE ar.url = ?
+		 ORDER BY t.transcription_id DESC
+		 LIMIT 1`,
+		fmt.Sprintf("querying latest article_audio_transcription by url=%s", url),
+		url,
+	)
+}
+
+func (r *Repository) InsertSpotExtractionRecord(input models.SpotExtractionRecordInput) (int64, error) {
+	var extractionID int64
+	err := r.db.QueryRow(
+		`INSERT INTO article_spot_extractions (article_raw_id, transcription_id, presenter_name, prompt_text, raw_response_json, parsed_response_json)
+		 VALUES (?, ?, ?, ?, json(?), json(?))
+		 RETURNING spot_extraction_id`,
+		input.ArticleRawID,
+		input.TranscriptionID,
+		input.PresenterName,
+		input.PromptText,
+		input.RawResponseJSON,
+		input.ParsedResponseJSON,
+	).Scan(&extractionID)
+	if err != nil {
+		return 0, fmt.Errorf("inserting article_spot_extractions article_raw_id=%d transcription_id=%d: %w", input.ArticleRawID, input.TranscriptionID, err)
+	}
+	return extractionID, nil
+}
+
+func (r *Repository) GetLatestSpotExtractionRecord(articleRawID int64) (*models.SpotExtractionRecord, error) {
+	var row models.SpotExtractionRecord
+	var presenter sql.NullString
+	err := r.db.QueryRow(
+		`SELECT spot_extraction_id, article_raw_id, transcription_id, presenter_name, prompt_text, raw_response_json, parsed_response_json, created_at
+		 FROM article_spot_extractions
+		 WHERE article_raw_id = ?
+		 ORDER BY spot_extraction_id DESC
+		 LIMIT 1`,
+		articleRawID,
+	).Scan(
+		&row.SpotExtractionID,
+		&row.ArticleRawID,
+		&row.TranscriptionID,
+		&presenter,
+		&row.PromptText,
+		&row.RawResponseJSON,
+		&row.ParsedResponseJSON,
+		&row.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("querying latest article_spot_extractions article_raw_id=%d: %w", articleRawID, err)
+	}
+	if presenter.Valid {
+		row.PresenterName = &presenter.String
+	}
+	return &row, nil
 }
 
 func (r *Repository) getArticleAudioTranscription(query string, errLabel string, args ...any) (*models.ArticleAudioTranscription, error) {

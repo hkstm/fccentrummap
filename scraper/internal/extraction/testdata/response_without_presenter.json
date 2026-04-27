@@ -1,0 +1,20 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "functionCall": {
+              "name": "submit_spots",
+              "args": {
+                "spots": [
+                  {"place": "Stopera", "sentenceStartTimestamp": 14.5}
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
