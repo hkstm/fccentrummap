@@ -36,6 +36,53 @@ type ArticleAudioTranscription struct {
 	CreatedAt        time.Time
 }
 
+const (
+	ArticleTextExtractionStatusMatched = "matched"
+	ArticleTextExtractionStatusNoMatch = "no_match"
+	ArticleTextExtractionStatusError   = "error"
+
+	ArticleTextExtractionModeTrafilatura = "trafilatura"
+	ArticleTextExtractionModeNoMatch     = "no_match"
+	ArticleTextExtractionModeError       = "error"
+
+	ArticleTextSourceTypeTrafilaturaText = "trafilatura-text"
+)
+
+type ArticleTextContentInput struct {
+	SourceType string
+	Content    string
+}
+
+type ArticleTextExtractionResult struct {
+	ArticleRawID   int64
+	ExtractionMode string
+	Status         string
+	MatchedCount   int
+	ErrorMessage   *string
+	Contents       []ArticleTextContentInput
+}
+
+type ArticleTextExtraction struct {
+	ExtractionID   int64
+	ArticleRawID   int64
+	ExtractionMode string
+	Status         string
+	MatchedCount   int
+	ErrorMessage   *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type ArticleTextContent struct {
+	TextContentID int64
+	ExtractionID  int64
+	ArticleRawID  int64
+	SourceType    string
+	Content       string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
 type Author struct {
 	AuthorID int64
 	Name     string

@@ -54,6 +54,18 @@ cd scraper && go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --tr
 
 # Dry-run extraction for the latest transcription row (must be explicit)
 cd scraper && go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --use-latest --out-dir ../data
+
+# Re-run article text extraction for latest 5 articles and persist results
+cd scraper && go run ./cmd/reextract-article-text --db-path ../data/spots.db --limit 5
+
+# Preview extraction outcomes without writing to DB
+cd scraper && go run ./cmd/reextract-article-text --db-path ../data/spots.db --limit 5 --dry-run
+
+# Print extracted text segments for visual verification
+cd scraper && go run ./cmd/reextract-article-text --db-path ../data/spots.db --limit 5 --dry-run --print-content
+
+# Write extracted text report to file for review
+cd scraper && go run ./cmd/reextract-article-text --db-path ../data/spots.db --limit 5 --dry-run --out-file ../data/article-text-report.txt
 ```
 
 ## Commit messages

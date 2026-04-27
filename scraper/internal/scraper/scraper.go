@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -93,7 +94,40 @@ func FetchAndStoreArticles(urls []string, repo *repository.Repository) error {
 			if fetchErr == nil {
 				fetchErr = fmt.Errorf("storing article %s: %w", r.Request.URL, err)
 			}
+			return
 		}
+
+		articleRaw, err := repo.GetArticleRawByURL(r.Request.URL.String())
+		if err != nil {
+			if fetchErr == nil {
+				fetchErr = fmt.Errorf("lookup article_raw after insert %s: %w", r.Request.URL.String(), err)
+			}
+			log.Printf("ERROR: lookup article_raw after insert failed url=%s reason=%v", r.Request.URL.String(), err)
+			return
+		}
+		if articleRaw == nil {
+			if fetchErr == nil {
+				fetchErr = fmt.Errorf("lookup article_raw after insert %s: missing row", r.Request.URL.String())
+			}
+			log.Printf("ERROR: article_raw missing after insert url=%s", r.Request.URL.String())
+			return
+		}
+
+		extractionResult := ExtractArticleTextContent(html)
+		extractionResult.ArticleRawID = articleRaw.ArticleRawID
+		if err := repo.ReplaceArticleTextExtraction(extractionResult); err != nil {
+			if fetchErr == nil {
+				fetchErr = fmt.Errorf("persisting article text extraction article_raw_id=%d url=%s: %w", articleRaw.ArticleRawID, r.Request.URL.String(), err)
+			}
+			log.Printf("ERROR: persisting article text extraction failed article_raw_id=%d url=%s reason=%v", articleRaw.ArticleRawID, r.Request.URL.String(), err)
+			return
+		}
+
+		if extractionResult.ErrorMessage != nil {
+			log.Printf("INFO: article text extraction article_raw_id=%d url=%s status=%s mode=%s matched_count=%d error=%s", articleRaw.ArticleRawID, r.Request.URL.String(), extractionResult.Status, extractionResult.ExtractionMode, extractionResult.MatchedCount, *extractionResult.ErrorMessage)
+			return
+		}
+		log.Printf("INFO: article text extraction article_raw_id=%d url=%s status=%s mode=%s matched_count=%d", articleRaw.ArticleRawID, r.Request.URL.String(), extractionResult.Status, extractionResult.ExtractionMode, extractionResult.MatchedCount)
 	})
 
 	for _, url := range urls {
