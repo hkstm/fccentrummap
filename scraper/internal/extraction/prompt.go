@@ -10,7 +10,17 @@ type PromptInput struct {
 	Sentences          []SentenceUnit
 }
 
+type RefinementPromptInput struct {
+	Sentences   []SentenceUnit
+	Pass1Spots  []Candidate
+	AudioStarts float64
+}
+
 func BuildDutchPrompt(input PromptInput) (string, error) {
+	return BuildDutchPass1Prompt(input)
+}
+
+func BuildDutchPass1Prompt(input PromptInput) (string, error) {
 	if strings.TrimSpace(input.CleanedArticleText) == "" {
 		return "", fmt.Errorf("cannot build prompt without cleaned article text")
 	}
@@ -55,6 +65,49 @@ func BuildDutchPrompt(input PromptInput) (string, error) {
 	b.WriteString("}\n")
 	b.WriteString("Gebruik exact de velden 'presenter_name', 'place' en 'sentenceStartTimestamp'.\n")
 	b.WriteString("Als de primaire presentator onbekend is: laat 'presenter_name' weg of gebruik een lege string.\n")
+
+	return b.String(), nil
+}
+
+func BuildDutchPass2RefinementPrompt(input RefinementPromptInput) (string, error) {
+	if len(input.Sentences) == 0 {
+		return "", fmt.Errorf("cannot build refinement prompt without sentence-level transcript units")
+	}
+	if len(input.Pass1Spots) == 0 {
+		return "", fmt.Errorf("cannot build refinement prompt without pass-1 spots")
+	}
+
+	var b strings.Builder
+	b.WriteString("Je bent een assistent die timestamps van bestaande spots verfijnt op basis van transcriptbewijs.\n")
+	b.WriteString("Doel: geef voor elke spot de vroegst-logische start van hetzelfde gespreksonderwerp in het transcript.\n")
+	b.WriteString("Belangrijk: werk in batch voor ALLE spots uit pass 1 in één functie-aanroep.\n")
+	b.WriteString("Belangrijk: refinedSentenceStartTimestamp moet <= originalSentenceStartTimestamp zijn.\n")
+	b.WriteString("Belangrijk: als geen betere eerdere anchor bestaat, gebruik exact de originele timestamp (no-op).\n")
+	b.WriteString("Belangrijk: gebruik uitsluitend transcript_sentences als bewijs; geen article-context nodig in deze pass.\n")
+	b.WriteString("\n")
+	b.WriteString("[pass1_spots]\n")
+	for i, s := range input.Pass1Spots {
+		if s.OriginalSentenceStartTimestamp == nil {
+			continue
+		}
+		b.WriteString(fmt.Sprintf("%d. place=%s originalSentenceStartTimestamp=%.3f\n", i+1, s.Place, *s.OriginalSentenceStartTimestamp))
+	}
+	b.WriteString("\n")
+	b.WriteString("[transcript_sentences]\n")
+	for i, s := range input.Sentences {
+		b.WriteString(fmt.Sprintf("%d. [start=%.3f] %s\n", i+1, s.Start, s.Text))
+	}
+	b.WriteString("\n")
+	b.WriteString("Gebruik de functie-aanroep '")
+	b.WriteString(SubmitRefinedSpotsFunctionName)
+	b.WriteString("' voor je antwoord.\n")
+	b.WriteString("Gebruik exact dit arguments-formaat:\n")
+	b.WriteString("{\n")
+	b.WriteString("  \"spots\": [\n")
+	b.WriteString("    {\"place\": \"<naam van plek uit pass1>\", \"refinedSentenceStartTimestamp\": <numerieke starttijd>}\n")
+	b.WriteString("  ]\n")
+	b.WriteString("}\n")
+	b.WriteString("Gebruik exact de velden 'place' en 'refinedSentenceStartTimestamp'.\n")
 
 	return b.String(), nil
 }

@@ -116,12 +116,12 @@ func run() error {
 		return fmt.Errorf("transcription %d cannot be used for extraction: %w", row.TranscriptionID, err)
 	}
 
-	prompt, err := extraction.BuildDutchPrompt(extraction.PromptInput{
+	pass1Prompt, err := extraction.BuildDutchPass1Prompt(extraction.PromptInput{
 		CleanedArticleText: cleanedArticleText,
 		Sentences:          sentences,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to build Dutch prompt: %w", err)
+		return fmt.Errorf("failed to build Dutch pass-1 prompt: %w", err)
 	}
 
 	client := genaiclient.NewClientWithEndpoint(*apiKey, strings.TrimSpace(*gemmaModel), strings.TrimSpace(*endpoint))
@@ -137,9 +137,12 @@ func run() error {
 	baseName := fmt.Sprintf("transcript_extraction_%d_%s", row.TranscriptionID, runTS)
 	transcriptPath := filepath.Join(*outDir, baseName+"_transcript.json")
 	articlePath := filepath.Join(*outDir, baseName+"_article.txt")
-	promptPath := filepath.Join(*outDir, baseName+"_prompt.txt")
-	responsePath := filepath.Join(*outDir, baseName+"_response.json")
-	responseErrorPath := filepath.Join(*outDir, baseName+"_response_error.txt")
+	pass1PromptPath := filepath.Join(*outDir, baseName+"_pass1_prompt.txt")
+	pass2PromptPath := filepath.Join(*outDir, baseName+"_pass2_prompt.txt")
+	pass1ResponsePath := filepath.Join(*outDir, baseName+"_pass1_response.json")
+	pass2ResponsePath := filepath.Join(*outDir, baseName+"_pass2_response.json")
+	pass1ErrorPath := filepath.Join(*outDir, baseName+"_pass1_response_error.txt")
+	pass2ErrorPath := filepath.Join(*outDir, baseName+"_pass2_response_error.txt")
 
 	if err := os.WriteFile(transcriptPath, []byte(row.ResponseJSON), 0o644); err != nil {
 		return fmt.Errorf("failed to write transcript artifact: %w", err)
@@ -147,52 +150,86 @@ func run() error {
 	if err := os.WriteFile(articlePath, []byte(cleanedArticleText), 0o644); err != nil {
 		return fmt.Errorf("failed to write cleaned article artifact: %w", err)
 	}
-	if err := os.WriteFile(promptPath, []byte(prompt), 0o644); err != nil {
-		return fmt.Errorf("failed to write prompt artifact: %w", err)
+	if err := os.WriteFile(pass1PromptPath, []byte(pass1Prompt), 0o644); err != nil {
+		return fmt.Errorf("failed to write pass-1 prompt artifact: %w", err)
 	}
 
-	result, err := client.GenerateContent(context.Background(), prompt, extraction.GenerateContentConfig())
+	pass1Result, err := client.GenerateContent(context.Background(), pass1Prompt, extraction.GeneratePass1ContentConfig())
 	if err != nil {
 		diagnostics := []byte(err.Error() + "\n")
-		if writeErr := os.WriteFile(responseErrorPath, diagnostics, 0o644); writeErr != nil {
-			return fmt.Errorf("model request failed: %w (also failed to write error artifact %s: %v)", err, responseErrorPath, writeErr)
+		if writeErr := os.WriteFile(pass1ErrorPath, diagnostics, 0o644); writeErr != nil {
+			return fmt.Errorf("pass-1 model request failed: %w (also failed to write error artifact %s: %v)", err, pass1ErrorPath, writeErr)
 		}
-		return fmt.Errorf("model request failed (error artifact preserved at %s): %w", responseErrorPath, err)
+		return fmt.Errorf("pass-1 model request failed (error artifact preserved at %s): %w", pass1ErrorPath, err)
+	}
+	if err := os.WriteFile(pass1ResponsePath, pass1Result.Body, 0o644); err != nil {
+		return fmt.Errorf("failed to write pass-1 response artifact: %w", err)
 	}
 
-	if err := os.WriteFile(responsePath, result.Body, 0o644); err != nil {
-		return fmt.Errorf("failed to write response artifact: %w", err)
+	pass1Parsed, err := extraction.ParseAndValidateResponse(pass1Result.Body)
+	if err != nil {
+		return fmt.Errorf("pass-1 model response parse/validation failed (raw response preserved at %s): %w", pass1ResponsePath, err)
 	}
 
-	parsed, err := extraction.ParseAndValidateResponse(result.Body)
-	if err != nil {
-		return fmt.Errorf("model response parse/validation failed (raw response preserved at %s): %w", responsePath, err)
-	}
-	parsedJSON, err := json.Marshal(parsed)
-	if err != nil {
-		return fmt.Errorf("failed to marshal parsed response: %w", err)
+	var (
+		pass2PromptText string
+		pass2RawBody    []byte
+		pass2Parsed     *extraction.ParsedRefinementResponse
+	)
+
+	if len(pass1Parsed.Spots) > 0 {
+		pass2PromptText, err = extraction.BuildDutchPass2RefinementPrompt(extraction.RefinementPromptInput{
+			Sentences:  sentences,
+			Pass1Spots: pass1Parsed.Spots,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to build Dutch pass-2 prompt: %w", err)
+		}
+		if err := os.WriteFile(pass2PromptPath, []byte(pass2PromptText), 0o644); err != nil {
+			return fmt.Errorf("failed to write pass-2 prompt artifact: %w", err)
+		}
+
+		pass2Result, err := client.GenerateContent(context.Background(), pass2PromptText, extraction.GeneratePass2RefinementContentConfig())
+		if err != nil {
+			diagnostics := []byte(err.Error() + "\n")
+			if writeErr := os.WriteFile(pass2ErrorPath, diagnostics, 0o644); writeErr != nil {
+				return fmt.Errorf("pass-2 model request failed: %w (also failed to write error artifact %s: %v)", err, pass2ErrorPath, writeErr)
+			}
+			return fmt.Errorf("pass-2 model request failed (error artifact preserved at %s): %w", pass2ErrorPath, err)
+		}
+		pass2RawBody = pass2Result.Body
+		pass2Parsed, err = extraction.ParseAndValidateRefinementResponse(pass2RawBody, pass1Parsed.Spots)
+		if err != nil {
+			return fmt.Errorf("pass-2 model response parse/validation failed: %w", err)
+		}
+		if err := os.WriteFile(pass2ResponsePath, pass2RawBody, 0o644); err != nil {
+			return fmt.Errorf("failed to write pass-2 response artifact: %w", err)
+		}
+	} else {
+		pass2PromptText = "SKIPPED: no pass-1 spots available for refinement\n"
+		if err := os.WriteFile(pass2PromptPath, []byte(pass2PromptText), 0o644); err != nil {
+			return fmt.Errorf("failed to write skipped pass-2 prompt artifact: %w", err)
+		}
+		pass2RawBody = []byte(`{"skipped":true,"reason":"no pass-1 spots"}`)
+		if err := os.WriteFile(pass2ResponsePath, pass2RawBody, 0o644); err != nil {
+			return fmt.Errorf("failed to write skipped pass-2 response artifact: %w", err)
+		}
 	}
 
-	extractionID, err := repo.InsertSpotExtractionRecord(models.SpotExtractionRecordInput{
-		ArticleRawID:       articleRaw.ArticleRawID,
-		TranscriptionID:    row.TranscriptionID,
-		PresenterName:      parsed.PresenterName,
-		PromptText:         prompt,
-		RawResponseJSON:    string(result.Body),
-		ParsedResponseJSON: string(parsedJSON),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to persist extraction record: %w", err)
+	finalParsed := extraction.ApplyRefinements(pass1Parsed, pass2Parsed)
+	if _, err := json.Marshal(finalParsed); err != nil {
+		return fmt.Errorf("failed to marshal final parsed response: %w", err)
 	}
 
 	fmt.Printf("article_url=%s\n", articleRaw.URL)
 	fmt.Printf("transcription_id=%d\n", row.TranscriptionID)
-	fmt.Printf("spot_extraction_id=%d\n", extractionID)
-	fmt.Printf("presenter_name=%s\n", nullableString(parsed.PresenterName))
+	fmt.Printf("presenter_name=%s\n", nullableString(finalParsed.PresenterName))
 	fmt.Printf("article_artifact=%s\n", articlePath)
 	fmt.Printf("transcript_artifact=%s\n", transcriptPath)
-	fmt.Printf("prompt_artifact=%s\n", promptPath)
-	fmt.Printf("response_artifact=%s\n", responsePath)
+	fmt.Printf("pass1_prompt_artifact=%s\n", pass1PromptPath)
+	fmt.Printf("pass2_prompt_artifact=%s\n", pass2PromptPath)
+	fmt.Printf("pass1_response_artifact=%s\n", pass1ResponsePath)
+	fmt.Printf("pass2_response_artifact=%s\n", pass2ResponsePath)
 	return nil
 }
 

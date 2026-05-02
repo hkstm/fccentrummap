@@ -43,6 +43,9 @@ func TestDeterministicFixturesPromptAndResponse(t *testing.T) {
 	if len(parsed.Spots) != 2 {
 		t.Fatalf("expected 2 spots from fixture, got %d", len(parsed.Spots))
 	}
+	if parsed.Spots[0].OriginalSentenceStartTimestamp == nil || parsed.Spots[0].RefinedSentenceStartTimestamp == nil {
+		t.Fatalf("expected fixture spot to include both original/refined timestamps: %+v", parsed.Spots[0])
+	}
 
 	withoutPresenter, err := os.ReadFile(filepath.Join("testdata", "response_without_presenter.json"))
 	if err != nil {
