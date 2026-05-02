@@ -45,7 +45,7 @@ func TestResetSpotExtractionStorageWithBackupAndPresenterPersistence(t *testing.
 		PresenterName:      &presenter,
 		PromptText:         "prompt-1",
 		RawResponseJSON:    `{"ok":true}`,
-		ParsedResponseJSON: `{"presenter_name":"Niels Oosthoek","spots":[{"place":"Stopera","sentenceStartTimestamp":1.2}]}`,
+		ParsedResponseJSON: `{"presenter_name":"Niels Oosthoek","spots":[{"place":"Stopera","sentenceStartTimestamp":1.2,"originalSentenceStartTimestamp":1.2,"refinedSentenceStartTimestamp":1.2}]}`,
 	})
 	if err != nil {
 		t.Fatalf("insert extraction record: %v", err)
@@ -75,7 +75,7 @@ func TestResetSpotExtractionStorageWithBackupAndPresenterPersistence(t *testing.
 		TranscriptionID:    transcriptionID,
 		PromptText:         "prompt-2",
 		RawResponseJSON:    `{"ok":true}`,
-		ParsedResponseJSON: `{"spots":[{"place":"Oosterpark","sentenceStartTimestamp":3.4}]}`,
+		ParsedResponseJSON: `{"spots":[{"place":"Oosterpark","sentenceStartTimestamp":3.4,"originalSentenceStartTimestamp":3.4,"refinedSentenceStartTimestamp":3.4}]}`,
 	})
 	if err != nil {
 		t.Fatalf("insert post-reset extraction record: %v", err)
