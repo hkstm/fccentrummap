@@ -31,6 +31,10 @@ go run ./cmd/export-transcription --db-path ../data/spots.db --transcription-id 
 go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --transcription-id 1 --out-dir ../data
 go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --use-latest --out-dir ../data
 
+go run ./cmd/geocode-place --query "Dam Square Amsterdam"
+# Example success JSON:
+# {"query":"Dam Square Amsterdam","name":"Dam","placeId":"...","mapsUrl":"https://www.google.com/maps/search/?api=1&query=Dam+Square+Amsterdam&query_place_id=..."}
+
 go test ./...
 go build ./...
 ```
@@ -38,6 +42,8 @@ go build ./...
 ## Environment variables
 
 - `MURMEL_API_KEY` (required by `cmd/transcribe-audio`; sent as `X-API-Key`)
+- `GOOGLE_MAPS_API_KEY` (required by `cmd/geocode-place` and geocoder)
+- `GOOGLE_PLACES_TEXT_SEARCH_ENDPOINT` (optional override for geocoder endpoint; useful for local testing)
 
 ## Commit message convention
 
@@ -66,5 +72,7 @@ make setup-hooks
 - `data/spots.db` is local/generated data
 - `viz/public/data/spots.json` is a generated artifact
 - the frontend boundary is static JSON, not direct SQLite access
+- `cmd/geocode-place` enforces a hard `locationRestriction.rectangle` in the text-search request (low `52.274525,4.711585`; high `52.461764,5.073559`); if nothing matches inside that box, it returns a deterministic no-result error in JSON
+- `cmd/geocode-place` success output contains `query`, `name`, `placeId`, and a stable `mapsUrl` derived from query + place ID
 
 If this document diverges from OpenSpec, treat `openspec/specs/` as the source of truth.
