@@ -55,6 +55,12 @@ cd scraper && go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --tr
 # Dry-run extraction for the latest transcription row (must be explicit)
 cd scraper && go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --use-latest --out-dir ../data
 
+# Geocode a place name via Google Places Text Search (JSON output)
+export GOOGLE_MAPS_API_KEY="..."
+cd scraper && go run ./cmd/geocode-place --query "Dam Square Amsterdam"
+# Example success JSON:
+# {"query":"Dam Square Amsterdam","name":"Dam","placeId":"...","mapsUrl":"https://www.google.com/maps/search/?api=1&query=Dam+Square+Amsterdam&query_place_id=..."}
+
 # Re-run article text extraction for latest 5 articles and persist results
 cd scraper && go run ./cmd/reextract-article-text --db-path ../data/spots.db --limit 5
 
