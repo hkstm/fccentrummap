@@ -19,21 +19,22 @@ make check
 
 ```bash
 cd scraper
-go run ./cmd/scraper -db ../data/spots.db
-go run ./cmd/export -db ../data/spots.db -out ../viz/public/data/spots.json
 
-go run ./cmd/transcribe-audio --db-path ../data/spots.db --audio-source-id 1 --language nl
-go run ./cmd/transcribe-audio --db-path ../data/spots.db --language nl
+# Unified stage CLI
+# Required env for init preflight: MURMEL_API_KEY, GOOGLE_MAPS_API_KEY,
+# and one of GEMINI_API_KEY / GOOGLE_API_KEY / GOOGLE_GENERATIVE_LANGUAGE_API_KEY
+go run ./cmd/scrape init --db-path ../data/spots.db --reset
+go run ./cmd/scrape collect-article-urls --io sqlite --db-path ../data/spots.db --article-url "<FCCENTRUM_ARTICLE_URL>"
+go run ./cmd/scrape fetch-articles --io sqlite --db-path ../data/spots.db
+go run ./cmd/scrape acquire-audio --io sqlite --db-path ../data/spots.db
+go run ./cmd/scrape transcribe-audio --io sqlite --db-path ../data/spots.db --language nl
+go run ./cmd/scrape extract-spots --io sqlite --db-path ../data/spots.db --out-dir ../data
 
-go run ./cmd/export-audio --db-path ../data/spots.db --audio-source-id 1 --out-dir ../data
-go run ./cmd/export-transcription --db-path ../data/spots.db --transcription-id 1 --out-dir ../data
+# Geocode stage is file-mode only for now
+go run ./cmd/scrape geocode-spots --io file --in ../data/stages/extract-spots/<identity>__extract-spots__candidates.json
 
-go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --transcription-id 1 --out-dir ../data
-go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --use-latest --out-dir ../data
-
-go run ./cmd/geocode-place --query "Dam Square Amsterdam"
-# Example success JSON:
-# {"query":"Dam Square Amsterdam","name":"Dam","placeId":"...","mapsUrl":"https://www.google.com/maps/search/?api=1&query=Dam+Square+Amsterdam&query_place_id=..."}
+# Export smoke test
+go run ./cmd/scrape export-data --io sqlite --db-path ../data/spots.db --out ../viz/public/data/spots.json
 
 go test ./...
 go build ./...
@@ -41,8 +42,9 @@ go build ./...
 
 ## Environment variables
 
-- `MURMEL_API_KEY` (required by `cmd/transcribe-audio`; sent as `X-API-Key`)
-- `GOOGLE_MAPS_API_KEY` (required by `cmd/geocode-place` and geocoder)
+- `MURMEL_API_KEY` (required by `cmd/scrape init` preflight and transcription)
+- `GOOGLE_MAPS_API_KEY` (required by `cmd/scrape init` preflight and geocode)
+- one of `GEMINI_API_KEY` / `GOOGLE_API_KEY` / `GOOGLE_GENERATIVE_LANGUAGE_API_KEY` (required by `cmd/scrape init` preflight)
 - `GOOGLE_PLACES_TEXT_SEARCH_ENDPOINT` (optional override for geocoder endpoint; useful for local testing)
 
 ## Commit message convention
@@ -72,7 +74,8 @@ make setup-hooks
 - `data/spots.db` is local/generated data
 - `viz/public/data/spots.json` is a generated artifact
 - the frontend boundary is static JSON, not direct SQLite access
-- `cmd/geocode-place` enforces a hard `locationRestriction.rectangle` in the text-search request (low `52.274525,4.711585`; high `52.461764,5.073559`); if nothing matches inside that box, it returns a deterministic no-result error in JSON
-- `cmd/geocode-place` success output contains `query`, `name`, `placeId`, and a stable `mapsUrl` derived from query + place ID
+- `scrape` enforces stage/mode validation before processing and fails non-zero with actionable guidance for unsupported combinations
+- `scrape geocode-spots --io sqlite` is intentionally unsupported in this scope; use `--io file --in <path>`
+- geocoder requests enforce a hard `locationRestriction.rectangle` (low `52.274525,4.711585`; high `52.461764,5.073559`)
 
 If this document diverges from OpenSpec, treat `openspec/specs/` as the source of truth.

@@ -7,10 +7,13 @@ help:
 	@echo "Targets: scrape export build test check viz setup-hooks"
 
 scrape:
-	cd scraper && go run ./cmd/scraper -db ../$(DB)
+	cd scraper && go run ./cmd/scrape init --db-path ../$(DB)
+	cd scraper && go run ./cmd/scrape collect-article-urls --io sqlite --db-path ../$(DB)
+	cd scraper && go run ./cmd/scrape fetch-articles --io sqlite --db-path ../$(DB)
+	cd scraper && go run ./cmd/scrape acquire-audio --io sqlite --db-path ../$(DB)
 
 export:
-	cd scraper && go run ./cmd/export -db ../$(DB) -out ../$(EXPORT)
+	cd scraper && go run ./cmd/scrape export-data --io sqlite --db-path ../$(DB) --out ../$(EXPORT)
 
 build:
 	cd scraper && go build ./...

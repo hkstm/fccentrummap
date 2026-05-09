@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Provide deterministic Google Places Text Search geocoding behavior with strict location restriction and a JSON-first CLI surface for scripting/debugging.
+
+## Requirements
 
 ### Requirement: Resolve place name to coordinates via Google Places Text Search
 The system SHALL expose a reusable geocoding function that accepts a place-name query string and resolves it through Google Places Text Search to a single coordinate result containing latitude and longitude.
@@ -49,3 +52,16 @@ The geocoding function and CLI SHALL return explicit errors for invalid configur
 - **WHEN** Google Places Text Search returns a non-success HTTP/API status or malformed payload
 - **THEN** the system SHALL return an error that preserves upstream failure context
 - **AND** it SHALL not return fabricated coordinates
+
+### Requirement: Geocode stage is file-mode only in this change
+In this change scope, geocode stage execution SHALL support file-mode input/output handoff and SHALL reject sqlite mode.
+
+#### Scenario: Geocode invoked in sqlite mode
+- **WHEN** a user runs `geocode-spots` with `--io sqlite` (explicit or default)
+- **THEN** the command SHALL fail with non-zero status
+- **AND** it SHALL explain that sqlite persistence integration is deferred and file mode is required
+
+#### Scenario: Geocode invoked in file mode
+- **WHEN** a user runs `geocode-spots --io file --in <path>`
+- **THEN** the stage SHALL process the explicit input artifact
+- **AND** it SHALL emit deterministic geocode output artifact(s)

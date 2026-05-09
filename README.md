@@ -31,48 +31,45 @@ make check
 make setup-hooks
 ```
 
-## Audio transcription CLI helpers
+## Unified scrape CLI (stage-based)
 
 ```bash
-# Required for transcription requests
-export MURMEL_API_KEY="..."
+cd scraper
 
-# Transcribe explicit audio source row
-cd scraper && go run ./cmd/transcribe-audio --db-path ../data/spots.db --audio-source-id 1 --language nl
+# Preflight env + schema init (fails fast on missing required API keys)
+go run ./cmd/scrape init --db-path ../data/spots.db --reset
 
-# Transcribe latest available audio source row
-cd scraper && go run ./cmd/transcribe-audio --db-path ../data/spots.db --language nl
+# SQLite-first stages
+go run ./cmd/scrape collect-article-urls --io sqlite --db-path ../data/spots.db --article-url "<FCCENTRUM_ARTICLE_URL>"
+go run ./cmd/scrape fetch-articles --io sqlite --db-path ../data/spots.db
+go run ./cmd/scrape acquire-audio --io sqlite --db-path ../data/spots.db
+go run ./cmd/scrape transcribe-audio --io sqlite --db-path ../data/spots.db --language nl
+go run ./cmd/scrape extract-spots --io sqlite --db-path ../data/spots.db --out-dir ../data
 
-# Export source audio by id to data/
-cd scraper && go run ./cmd/export-audio --db-path ../data/spots.db --audio-source-id 1 --out-dir ../data
+# Geocode is file-mode only in this change scope
+# (sqlite mode fails with explicit guidance)
+go run ./cmd/scrape geocode-spots --io file --in ../data/stages/extract-spots/<identity>__extract-spots__candidates.json
 
-# Export stored transcription JSON by id to data/
-cd scraper && go run ./cmd/export-transcription --db-path ../data/spots.db --transcription-id 1 --out-dir ../data
-
-# Dry-run extraction for an explicit transcription row
-cd scraper && go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --transcription-id 1 --out-dir ../data
-
-# Dry-run extraction for the latest transcription row (must be explicit)
-cd scraper && go run ./cmd/extract-spots-dry-run --db-path ../data/spots.db --use-latest --out-dir ../data
-
-# Geocode a place name via Google Places Text Search (JSON output)
-export GOOGLE_MAPS_API_KEY="..."
-cd scraper && go run ./cmd/geocode-place --query "Dam Square Amsterdam"
-# Example success JSON:
-# {"query":"Dam Square Amsterdam","name":"Dam","placeId":"...","mapsUrl":"https://www.google.com/maps/search/?api=1&query=Dam+Square+Amsterdam&query_place_id=..."}
-
-# Re-run article text extraction for latest 5 articles and persist results
-cd scraper && go run ./cmd/reextract-article-text --db-path ../data/spots.db --limit 5
-
-# Preview extraction outcomes without writing to DB
-cd scraper && go run ./cmd/reextract-article-text --db-path ../data/spots.db --limit 5 --dry-run
-
-# Print extracted text segments for visual verification
-cd scraper && go run ./cmd/reextract-article-text --db-path ../data/spots.db --limit 5 --dry-run --print-content
-
-# Write extracted text report to file for review
-cd scraper && go run ./cmd/reextract-article-text --db-path ../data/spots.db --limit 5 --dry-run --out-file ../data/article-text-report.txt
+# Export smoke test (can succeed even with null payload during scaffold phase)
+go run ./cmd/scrape export-data --io sqlite --db-path ../data/spots.db --out ../viz/public/data/spots.json
 ```
+
+### Stage mode support matrix
+
+| Stage | `--io sqlite` | `--io file` |
+|---|---|---|
+| `init` | Supported | Not supported (error) |
+| `collect-article-urls` | Supported | Supported |
+| `fetch-articles` | Supported | Supported |
+| `acquire-audio` | Supported | Supported |
+| `transcribe-audio` | Supported | Supported |
+| `extract-spots` | Supported | Supported |
+| `geocode-spots` | Not supported (error) | Supported |
+| `export-data` | Supported | Supported |
+
+## Notes
+
+Legacy standalone command entrypoints were removed in favor of `cmd/scrape` stage subcommands.
 
 ## Commit messages
 
