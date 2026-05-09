@@ -200,7 +200,12 @@ func (r *Repository) ResetSpotExtractionStorageWithBackup(backupSuffix string) (
 
 func (r *Repository) InsertArticleRaw(url, html string, videoID *string) error {
 	_, err := r.db.Exec(
-		`INSERT OR IGNORE INTO articles_raw (url, html, video_id) VALUES (?, ?, ?)`,
+		`INSERT INTO articles_raw (url, html, video_id)
+		 VALUES (?, ?, ?)
+		 ON CONFLICT(url) DO UPDATE SET
+			html = excluded.html,
+			video_id = excluded.video_id,
+			updated_at = CURRENT_TIMESTAMP`,
 		url, html, videoID,
 	)
 	if err != nil {

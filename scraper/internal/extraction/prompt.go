@@ -84,6 +84,9 @@ func BuildDutchPass2RefinementPrompt(input RefinementPromptInput) (string, error
 	b.WriteString("Belangrijk: refinedSentenceStartTimestamp moet <= originalSentenceStartTimestamp zijn.\n")
 	b.WriteString("Belangrijk: als geen betere eerdere anchor bestaat, gebruik exact de originele timestamp (no-op).\n")
 	b.WriteString("Belangrijk: gebruik uitsluitend transcript_sentences als bewijs; geen article-context nodig in deze pass.\n")
+	b.WriteString("Toegestaan: je output mag een subset van pass1_spots bevatten (je hoeft niet elke spot op te nemen).\n")
+	b.WriteString("Niet toegestaan: dubbele place-waarden in spots (elke place maximaal één keer).\n")
+	b.WriteString("Niet toegestaan: nieuwe of onbekende place-waarden die niet in pass1_spots staan.\n")
 	b.WriteString("\n")
 	b.WriteString("[pass1_spots]\n")
 	for i, s := range input.Pass1Spots {
