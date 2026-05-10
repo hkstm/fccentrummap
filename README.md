@@ -33,8 +33,13 @@ make setup-hooks
 
 ## Unified scrape CLI (stage-based)
 
+The unified CLI is wired with `urfave/cli/v3` and uses subcommands plus idiomatic `--help` output.
+
 ```bash
 cd scraper
+
+go run ./cmd/scrape --help
+go run ./cmd/scrape <stage> --help
 
 # Preflight env + schema init (fails fast on missing required API keys)
 go run ./cmd/scrape init --db-path ../data/spots.db --reset
@@ -70,6 +75,7 @@ go run ./cmd/scrape export-data --io sqlite --db-path ../data/spots.db --out ../
 ## Notes
 
 Legacy standalone command entrypoints were removed in favor of `cmd/scrape` stage subcommands.
+Deprecated stdlib `flag` parsing paths and legacy invocation shims were intentionally dropped during the urfave/cli v3 migration.
 
 ## Commit messages
 

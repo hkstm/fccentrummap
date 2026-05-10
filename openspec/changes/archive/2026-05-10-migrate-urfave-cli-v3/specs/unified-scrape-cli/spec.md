@@ -1,6 +1,5 @@
-## Purpose
-Define a single stage-based CLI entrypoint for scraper pipeline execution with explicit I/O mode behavior and preflight validation.
-## Requirements
+## MODIFIED Requirements
+
 ### Requirement: Unified scrape CLI provides stage subcommands
 The system SHALL provide a single urfave/cli v3 entrypoint for pipeline execution with subcommands: `init`, `collect-article-urls`, `fetch-articles`, `acquire-audio`, `transcribe-audio`, `extract-spots`, `geocode-spots`, and `export-data`.
 
@@ -16,13 +15,7 @@ The unified CLI SHALL return a non-zero error with actionable guidance when a st
 - **THEN** the CLI SHALL fail explicitly
 - **AND** it SHALL instruct the user to use the currently supported mode (file mode with explicit `--in`)
 
-### Requirement: Init performs API preflight validation
-The `init` stage SHALL validate required API credentials before starting pipeline setup.
-
-#### Scenario: Missing required API credentials
-- **WHEN** one or more required API credentials are missing
-- **THEN** `init` SHALL fail with non-zero status
-- **AND** it SHALL report which required environment variables are missing
+## ADDED Requirements
 
 ### Requirement: Unified scrape CLI MAY adopt idiomatic urfave/cli v3 flag conventions
 The unified scrape CLI SHALL allow urfave/cli v3-native flag handling and command ergonomics, and it SHALL NOT be required to preserve exact legacy stdlib-flag invocation edge cases.
@@ -31,4 +24,3 @@ The unified scrape CLI SHALL allow urfave/cli v3-native flag handling and comman
 - **WHEN** a previously accepted edge-case invocation is incompatible with urfave/cli v3 conventions
 - **THEN** the CLI MAY reject that invocation
 - **AND** the repository documentation SHALL reflect the supported invocation form
-
