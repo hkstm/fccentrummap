@@ -20,7 +20,10 @@ make check
 ```bash
 cd scraper
 
-# Unified stage CLI
+# Unified stage CLI (urfave/cli v3)
+go run ./cmd/scrape --help
+go run ./cmd/scrape <stage> --help
+
 # Required env for init preflight: MURMEL_API_KEY, GOOGLE_MAPS_API_KEY,
 # and one of GEMINI_API_KEY / GOOGLE_API_KEY / GOOGLE_GENERATIVE_LANGUAGE_API_KEY
 go run ./cmd/scrape init --db-path ../data/spots.db --reset
@@ -76,6 +79,7 @@ make setup-hooks
 - the frontend boundary is static JSON, not direct SQLite access
 - `scrape` enforces stage/mode validation before processing and fails non-zero with actionable guidance for unsupported combinations
 - `scrape geocode-spots --io sqlite` is intentionally unsupported in this scope; use `--io file --in <path>`
+- legacy stdlib `flag` wiring compatibility shims are intentionally removed; prefer documented urfave/cli v3 invocation forms
 - geocoder requests enforce a hard `locationRestriction.rectangle` (low `52.274525,4.711585`; high `52.461764,5.073559`)
 
 If this document diverges from OpenSpec, treat `openspec/specs/` as the source of truth.
