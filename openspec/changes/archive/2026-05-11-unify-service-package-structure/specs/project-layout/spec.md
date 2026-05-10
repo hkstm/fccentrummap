@@ -1,8 +1,4 @@
-## Purpose
-
-Define the canonical repository layout, subsystem boundaries, and default artifact locations.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Repository has explicit top-level subsystem boundaries
 The repository SHALL organize durable concerns into top-level locations for the Go scraper pipeline, generated data, OpenSpec artifacts, documentation, and the future frontend area. Within the scraper module, internal service code SHALL also follow a canonical layout separating stage orchestration packages, capability service packages, and shared primitives.
@@ -12,23 +8,7 @@ The repository SHALL organize durable concerns into top-level locations for the 
 - **THEN** they SHALL find `scraper/`, `data/`, `openspec/`, `docs/`, and `viz/` as the primary project areas
 - **AND** they SHALL be able to identify canonical internal service ownership boundaries within `scraper/internal`
 
-### Requirement: Go module root lives under `scraper/`
-The Go codebase SHALL use `scraper/` as its module root rather than the repository root.
-
-#### Scenario: Running Go commands
-- **WHEN** a contributor runs Go build or test commands for the scraper pipeline
-- **THEN** those commands SHALL execute from the module rooted at `scraper/`
-
-### Requirement: Generated artifacts use stable locations
-Generated artifacts SHALL live in locations aligned to their roles.
-
-#### Scenario: SQLite database location
-- **WHEN** the scraper writes or reads its SQLite database
-- **THEN** the database path SHALL be `data/spots.db` by default
-
-#### Scenario: Frontend export location
-- **WHEN** the export step writes frontend-consumable data
-- **THEN** it SHALL write JSON to `viz/public/data/spots.json`
+## ADDED Requirements
 
 ### Requirement: Scraper internal layout SHALL expose canonical service locations
 The scraper module SHALL maintain discoverable internal package locations where stage orchestration lives under `scraper/internal/pipeline/<stage>`, reusable capability services live under explicitly named capability packages, and cross-stage primitives live under `scraper/internal/pipeline/common`.

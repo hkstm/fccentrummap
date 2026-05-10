@@ -1,4 +1,4 @@
-package scraper
+package articletext
 
 import (
 	"strings"

@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -11,12 +9,14 @@ import (
 	"strings"
 
 	"github.com/hkstm/fccentrummap/internal/cliutil"
-	"github.com/hkstm/fccentrummap/internal/extractspots"
-	"github.com/hkstm/fccentrummap/internal/geocoder"
-	"github.com/hkstm/fccentrummap/internal/models"
+	"github.com/hkstm/fccentrummap/internal/pipeline/acquireaudio"
+	"github.com/hkstm/fccentrummap/internal/pipeline/collectarticleurls"
+	"github.com/hkstm/fccentrummap/internal/pipeline/exportdata"
+	"github.com/hkstm/fccentrummap/internal/pipeline/extractspots"
+	"github.com/hkstm/fccentrummap/internal/pipeline/fetcharticles"
+	"github.com/hkstm/fccentrummap/internal/pipeline/geocodespots"
+	"github.com/hkstm/fccentrummap/internal/pipeline/transcribeaudio"
 	"github.com/hkstm/fccentrummap/internal/repository"
-	"github.com/hkstm/fccentrummap/internal/scraper"
-	"github.com/hkstm/fccentrummap/internal/transcription"
 	"github.com/urfave/cli/v3"
 )
 
@@ -94,67 +94,23 @@ func collectArticleURLsCommand() *cli.Command {
 			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite|file"},
 			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database"},
 			&cli.StringFlag{Name: "article-url", Usage: "optional single article URL"},
-			&cli.StringFlag{Name: "in", Usage: "required for --io file"},
+			&cli.StringFlag{Name: "in", Usage: "required for --io file unless --article-url is provided"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			_ = ctx
-			ioMode := cmd.String("io")
-			if err := validateStageMode("collect-article-urls", ioMode); err != nil {
+			mode := cmd.String("io")
+			if err := validateStageMode("collect-article-urls", mode); err != nil {
 				return err
 			}
-			dbPath := cmd.String("db-path")
-			articleURL := cmd.String("article-url")
-			inPath := cmd.String("in")
-
-			if ioMode == ioSQLite {
-				repo, err := repository.New(dbPath)
-				if err != nil {
-					return err
-				}
-				defer repo.Close()
-				if err := repo.InitSchema(); err != nil {
-					return err
-				}
-				if strings.TrimSpace(articleURL) != "" {
-					if err := repo.InsertArticleRaw(strings.TrimSpace(articleURL), "", nil); err != nil {
-						return err
-					}
-					fmt.Printf("seeded article url=%s\n", strings.TrimSpace(articleURL))
-					return nil
-				}
-				urls, err := scraper.CrawlArticleURLs()
-				if err != nil {
-					return err
-				}
-				for _, u := range urls {
-					if err := repo.InsertArticleRaw(u, "", nil); err != nil {
-						return err
-					}
-				}
-				fmt.Printf("seeded %d article urls\n", len(urls))
-				return nil
-			}
-
-			if strings.TrimSpace(inPath) == "" && strings.TrimSpace(articleURL) == "" {
-				return fmt.Errorf("collect-article-urls --io file requires --in or --article-url")
-			}
-			identity := strings.TrimSpace(articleURL)
-			if identity == "" {
-				identity = filepath.Base(strings.TrimSpace(inPath))
-			}
-			out := cliutil.StageArtifactPath(cliutil.DefaultDataDir(), "collect-article-urls", identity, "articles", "json")
-			if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
-				return err
-			}
-			payload := map[string]any{"articleUrl": strings.TrimSpace(articleURL), "in": strings.TrimSpace(inPath)}
-			b, err := json.MarshalIndent(payload, "", "  ")
+			svc := collectarticleurls.NewService(collectarticleurls.NewSQLiteAdapter(), collectarticleurls.NewFileAdapter())
+			res, err := svc.Run(ctx, mode, collectarticleurls.Request{DBPath: cmd.String("db-path"), ArticleURL: cmd.String("article-url"), InputPath: cmd.String("in")})
 			if err != nil {
 				return err
 			}
-			if err := os.WriteFile(out, b, 0o644); err != nil {
-				return err
+			if mode == ioSQLite {
+				fmt.Printf("seeded %d article urls\n", len(res.URLs))
+			} else {
+				fmt.Printf("artifact=%s\n", res.OutputPath)
 			}
-			fmt.Printf("artifact=%s\n", out)
 			return nil
 		},
 	}
@@ -170,42 +126,19 @@ func fetchArticlesCommand() *cli.Command {
 			&cli.StringFlag{Name: "in", Usage: "required for --io file"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			_ = ctx
-			ioMode := cmd.String("io")
-			if err := validateStageMode("fetch-articles", ioMode); err != nil {
+			mode := cmd.String("io")
+			if err := validateStageMode("fetch-articles", mode); err != nil {
 				return err
 			}
-			dbPath := cmd.String("db-path")
-			inPath := cmd.String("in")
-
-			if ioMode == ioSQLite {
-				repo, err := repository.New(dbPath)
-				if err != nil {
-					return err
-				}
-				defer repo.Close()
-				if err := repo.InitSchema(); err != nil {
-					return err
-				}
-				articles, err := repo.GetPendingArticles()
-				if err != nil {
-					return err
-				}
-				urls := make([]string, 0, len(articles))
-				for _, a := range articles {
-					urls = append(urls, a.URL)
-				}
-				if err := scraper.FetchAndStoreArticles(urls, repo); err != nil {
-					return err
-				}
-				fmt.Printf("fetched %d articles\n", len(urls))
-				return nil
-			}
-			if strings.TrimSpace(inPath) == "" {
-				return fmt.Errorf("fetch-articles --io file requires --in")
-			}
-			if err := writePassthroughArtifact("fetch-articles", inPath, "fetched"); err != nil {
+			svc := fetcharticles.NewService(fetcharticles.NewSQLiteAdapter(), fetcharticles.NewFileAdapter())
+			res, err := svc.Run(ctx, mode, fetcharticles.Request{DBPath: cmd.String("db-path"), InputPath: cmd.String("in")})
+			if err != nil {
 				return err
+			}
+			if mode == ioSQLite {
+				fmt.Printf("fetched %d articles\n", res.FetchedCount)
+			} else {
+				fmt.Printf("artifact=%s\n", res.OutputPath)
 			}
 			return nil
 		},
@@ -222,32 +155,19 @@ func acquireAudioCommand() *cli.Command {
 			&cli.StringFlag{Name: "in", Usage: "required for --io file"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			ioMode := cmd.String("io")
-			if err := validateStageMode("acquire-audio", ioMode); err != nil {
+			mode := cmd.String("io")
+			if err := validateStageMode("acquire-audio", mode); err != nil {
 				return err
 			}
-			dbPath := cmd.String("db-path")
-			inPath := cmd.String("in")
-			if ioMode == ioSQLite {
-				repo, err := repository.New(dbPath)
-				if err != nil {
-					return err
-				}
-				defer repo.Close()
-				if err := repo.InitSchema(); err != nil {
-					return err
-				}
-				if err := scraper.AcquireAndStoreAudio(ctx, repo, nil); err != nil {
-					return err
-				}
+			svc := acquireaudio.NewService(acquireaudio.NewSQLiteAdapter(), acquireaudio.NewFileAdapter())
+			res, err := svc.Run(ctx, mode, acquireaudio.Request{DBPath: cmd.String("db-path"), InputPath: cmd.String("in")})
+			if err != nil {
+				return err
+			}
+			if mode == ioSQLite {
 				fmt.Println("acquired audio")
-				return nil
-			}
-			if strings.TrimSpace(inPath) == "" {
-				return fmt.Errorf("acquire-audio --io file requires --in")
-			}
-			if err := writePassthroughArtifact("acquire-audio", inPath, "audio"); err != nil {
-				return err
+			} else {
+				fmt.Printf("artifact=%s\n", res.OutputPath)
 			}
 			return nil
 		},
@@ -265,68 +185,19 @@ func transcribeAudioCommand() *cli.Command {
 			&cli.StringFlag{Name: "language", Value: "nl", Usage: "language code sent to Murmel"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			ioMode := cmd.String("io")
-			if err := validateStageMode("transcribe-audio", ioMode); err != nil {
+			mode := cmd.String("io")
+			if err := validateStageMode("transcribe-audio", mode); err != nil {
 				return err
 			}
-			dbPath := cmd.String("db-path")
-			inPath := cmd.String("in")
-			language := cmd.String("language")
-
-			if ioMode == ioSQLite {
-				repo, err := repository.New(dbPath)
-				if err != nil {
-					return err
-				}
-				defer repo.Close()
-				if err := repo.InitSchema(); err != nil {
-					return err
-				}
-				src, err := repo.GetLatestArticleAudioSource()
-				if err != nil {
-					return err
-				}
-				if src == nil {
-					return fmt.Errorf("no audio source rows with non-empty audio_blob found")
-				}
-				client := transcription.NewMurmelClient(os.Getenv("MURMEL_API_KEY"))
-				if err := client.Validate(); err != nil {
-					return err
-				}
-				filename := fmt.Sprintf("article_audio_source_%d.%s", src.AudioSourceID, cliutil.SafeExt(src.AudioFormat))
-				res, err := client.Transcribe(ctx, filename, src.AudioBlob, language)
-				if err != nil {
-					return err
-				}
-				msg, jsonErr := canonicalizeJSON(res.Body)
-				if jsonErr != nil {
-					msg = "{}"
-					errMessage := fmt.Sprintf("non-JSON response persisted with fallback payload: %v", jsonErr)
-					if res.ErrMessage != nil {
-						errMessage = *res.ErrMessage + "; " + errMessage
-					}
-					res.ErrMessage = &errMessage
-				}
-				id, err := repo.UpsertArticleAudioTranscription(models.ArticleAudioTranscription{
-					AudioSourceID:    src.AudioSourceID,
-					Provider:         "murmel",
-					Language:         language,
-					HTTPStatus:       res.HTTPStatus,
-					ResponseJSON:     msg,
-					ResponseByteSize: int64(len(msg)),
-					ErrorMessage:     res.ErrMessage,
-				})
-				if err != nil {
-					return err
-				}
-				fmt.Printf("transcription_id=%d\n", id)
-				return nil
-			}
-			if strings.TrimSpace(inPath) == "" {
-				return fmt.Errorf("transcribe-audio --io file requires --in")
-			}
-			if err := writePassthroughArtifact("transcribe-audio", inPath, "transcription"); err != nil {
+			svc := transcribeaudio.NewService(transcribeaudio.NewSQLiteAdapter(), transcribeaudio.NewFileAdapter())
+			res, err := svc.Run(ctx, mode, transcribeaudio.Request{DBPath: cmd.String("db-path"), InputPath: cmd.String("in"), Language: cmd.String("language")})
+			if err != nil {
 				return err
+			}
+			if mode == ioSQLite {
+				fmt.Printf("transcription_id=%d\n", res.TranscriptionID)
+			} else {
+				fmt.Printf("artifact=%s\n", res.OutputPath)
 			}
 			return nil
 		},
@@ -345,40 +216,19 @@ func extractSpotsCommand() *cli.Command {
 			&cli.StringFlag{Name: "gemma-model", Value: defaultGemmaModel(), Usage: "Gemma model identifier"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			ioMode := cmd.String("io")
-			if err := validateStageMode("extract-spots", ioMode); err != nil {
+			mode := cmd.String("io")
+			if err := validateStageMode("extract-spots", mode); err != nil {
 				return err
 			}
-			dbPath := cmd.String("db-path")
-			inPath := cmd.String("in")
-			if ioMode == ioSQLite {
-				repo, err := repository.New(dbPath)
-				if err != nil {
-					return err
-				}
-				defer repo.Close()
-				if err := repo.InitSchema(); err != nil {
-					return err
-				}
-				res, err := extractspots.Run(ctx, repo, extractspots.Options{
-					UseLatest:     true,
-					OutDir:        cmd.String("out-dir"),
-					GemmaModel:    cmd.String("gemma-model"),
-					APIKey:        defaultGeminiAPIKey(),
-					Endpoint:      strings.TrimSpace(os.Getenv("GOOGLE_GENERATIVE_LANGUAGE_ENDPOINT")),
-					PersistRecord: true,
-				})
-				if err != nil {
-					return err
-				}
+			svc := extractspots.NewService(extractspots.NewSQLiteAdapter(), extractspots.NewFileAdapter())
+			res, err := svc.Run(ctx, mode, extractspots.Request{DBPath: cmd.String("db-path"), InputPath: cmd.String("in"), OutDir: cmd.String("out-dir"), GemmaModel: cmd.String("gemma-model"), APIKey: defaultGeminiAPIKey(), Endpoint: strings.TrimSpace(os.Getenv("GOOGLE_GENERATIVE_LANGUAGE_ENDPOINT")), UseLatest: true, PersistData: true})
+			if err != nil {
+				return err
+			}
+			if mode == ioSQLite {
 				fmt.Printf("spot_extraction_id=%d\n", res.SpotExtractionID)
-				return nil
-			}
-			if strings.TrimSpace(inPath) == "" {
-				return fmt.Errorf("extract-spots --io file requires --in")
-			}
-			if err := writePassthroughArtifact("extract-spots", inPath, "candidates"); err != nil {
-				return err
+			} else {
+				fmt.Printf("artifact=%s\n", res.OutputPath)
 			}
 			return nil
 		},
@@ -394,57 +244,16 @@ func geocodeSpotsCommand() *cli.Command {
 			&cli.StringFlag{Name: "in", Usage: "required for --io file"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			ioMode := cmd.String("io")
-			if err := validateStageMode("geocode-spots", ioMode); err != nil {
+			mode := cmd.String("io")
+			if err := validateStageMode("geocode-spots", mode); err != nil {
 				return err
 			}
-			inPath := cmd.String("in")
-			if ioMode == ioSQLite {
-				return fmt.Errorf("geocode-spots does not support --io sqlite yet; sqlite persistence is deferred. Use --io file --in <path>")
-			}
-			if strings.TrimSpace(inPath) == "" {
-				return fmt.Errorf("geocode-spots --io file requires --in")
-			}
-
-			b, err := os.ReadFile(strings.TrimSpace(inPath))
+			svc := geocodespots.NewService(geocodespots.NewSQLiteAdapter(), geocodespots.NewFileAdapter())
+			res, err := svc.Run(ctx, mode, geocodespots.Request{InputPath: cmd.String("in")})
 			if err != nil {
 				return err
 			}
-			var payload map[string]any
-			if err := json.Unmarshal(b, &payload); err != nil {
-				return fmt.Errorf("invalid geocode input JSON: %w", err)
-			}
-			query, ok := payload["query"].(string)
-			if !ok || strings.TrimSpace(query) == "" {
-				return fmt.Errorf("geocode input missing required field: query")
-			}
-			query = strings.TrimSpace(query)
-			g, err := geocoder.New()
-			if err != nil {
-				return fmt.Errorf("failed to initialize geocoder: %w", err)
-			}
-			coords, err := g.GeocodePlace(ctx, query)
-			if err != nil {
-				return err
-			}
-			inBase := strings.TrimSuffix(filepath.Base(strings.TrimSpace(inPath)), filepath.Ext(strings.TrimSpace(inPath)))
-			identity := strings.SplitN(inBase, "__", 2)[0]
-			if strings.TrimSpace(identity) == "" {
-				return fmt.Errorf("unable to derive artifact identity from --in path: %s", strings.TrimSpace(inPath))
-			}
-			out := cliutil.StageArtifactPath(cliutil.DefaultDataDir(), "geocode-spots", identity, "geocoded", "json")
-			if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
-				return err
-			}
-			resp := map[string]any{"query": query, "coordinates": coords}
-			outBytes, err := json.MarshalIndent(resp, "", "  ")
-			if err != nil {
-				return err
-			}
-			if err := os.WriteFile(out, outBytes, 0o644); err != nil {
-				return err
-			}
-			fmt.Printf("artifact=%s\n", out)
+			fmt.Printf("artifact=%s\n", res.OutputPath)
 			return nil
 		},
 	}
@@ -461,42 +270,19 @@ func exportDataCommand() *cli.Command {
 			&cli.StringFlag{Name: "in", Usage: "required for --io file"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			_ = ctx
-			ioMode := cmd.String("io")
-			if err := validateStageMode("export-data", ioMode); err != nil {
+			mode := cmd.String("io")
+			if err := validateStageMode("export-data", mode); err != nil {
 				return err
 			}
-			dbPath := cmd.String("db-path")
-			outPath := cmd.String("out")
-			inPath := cmd.String("in")
-			if ioMode == ioSQLite {
-				repo, err := repository.New(dbPath)
-				if err != nil {
-					return err
-				}
-				defer repo.Close()
-				data, err := repo.ExportData()
-				if err != nil {
-					return err
-				}
-				if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-					return err
-				}
-				payload, err := json.MarshalIndent(data, "", "  ")
-				if err != nil {
-					return err
-				}
-				if err := os.WriteFile(outPath, payload, 0o644); err != nil {
-					return err
-				}
-				fmt.Printf("exported=%s\n", outPath)
-				return nil
-			}
-			if strings.TrimSpace(inPath) == "" {
-				return fmt.Errorf("export-data --io file requires --in")
-			}
-			if err := writePassthroughArtifact("export-data", inPath, "export"); err != nil {
+			svc := exportdata.NewService(exportdata.NewSQLiteAdapter(), exportdata.NewFileAdapter())
+			res, err := svc.Run(ctx, mode, exportdata.Request{DBPath: cmd.String("db-path"), OutputPath: cmd.String("out"), InputPath: cmd.String("in")})
+			if err != nil {
 				return err
+			}
+			if mode == ioSQLite {
+				fmt.Printf("exported=%s\n", res.OutputPath)
+			} else {
+				fmt.Printf("artifact=%s\n", res.OutputPath)
 			}
 			return nil
 		},
@@ -545,23 +331,6 @@ func validateStageMode(stage, mode string) error {
 	return nil
 }
 
-func writePassthroughArtifact(stage, inPath, payloadType string) error {
-	identity := strings.TrimSuffix(filepath.Base(inPath), filepath.Ext(inPath))
-	out := cliutil.StageArtifactPath(cliutil.DefaultDataDir(), stage, identity, payloadType, "json")
-	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
-		return err
-	}
-	b, err := os.ReadFile(inPath)
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(out, b, 0o644); err != nil {
-		return err
-	}
-	fmt.Printf("artifact=%s\n", out)
-	return nil
-}
-
 func defaultGemmaModel() string {
 	if model := strings.TrimSpace(os.Getenv("GEMMA_MODEL")); model != "" {
 		return model
@@ -580,20 +349,6 @@ func defaultGeminiAPIKey() string {
 		return v
 	}
 	return ""
-}
-
-func canonicalizeJSON(raw []byte) (string, error) {
-	if len(bytes.TrimSpace(raw)) == 0 {
-		return "", fmt.Errorf("empty response body")
-	}
-	if !json.Valid(raw) {
-		return "", fmt.Errorf("response body is not valid JSON")
-	}
-	var buf bytes.Buffer
-	if err := json.Compact(&buf, raw); err != nil {
-		return "", fmt.Errorf("canonicalizing JSON: %w", err)
-	}
-	return buf.String(), nil
 }
 
 func fatalf(format string, args ...any) {

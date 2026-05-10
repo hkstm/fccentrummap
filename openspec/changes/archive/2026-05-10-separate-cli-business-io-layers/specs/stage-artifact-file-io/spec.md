@@ -1,6 +1,5 @@
-## Purpose
-Define deterministic file-mode handoff rules for stage input/output artifacts across the unified scrape pipeline.
-## Requirements
+## MODIFIED Requirements
+
 ### Requirement: File mode requires explicit input path
 File mode execution SHALL require explicit `--in` path(s) for stage inputs.
 
@@ -23,6 +22,8 @@ The system SHALL NOT auto-select latest artifacts in file mode.
 - **WHEN** a stage needs file input and no explicit input path is provided
 - **THEN** the stage SHALL fail instead of selecting a latest artifact automatically
 
+## ADDED Requirements
+
 ### Requirement: File-mode stage execution SHALL use typed stage contracts
 File-mode execution for `collect-article-urls`, `fetch-articles`, `acquire-audio`, `transcribe-audio`, `extract-spots`, `geocode-spots`, and `export-data` SHALL parse and produce typed stage payloads instead of passthrough copies.
 
@@ -39,4 +40,3 @@ File artifact payloads SHALL remain simple and human-inspectable for ad-hoc debu
 - **WHEN** a maintainer opens a generated stage artifact file
 - **THEN** the payload SHALL be directly readable and useful for debugging stage handoff behavior
 - **AND** the payload SHALL not include schema-version metadata fields
-

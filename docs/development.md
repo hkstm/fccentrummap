@@ -24,6 +24,9 @@ cd scraper
 go run ./cmd/scrape --help
 go run ./cmd/scrape <stage> --help
 
+# Architecture: CLI -> service -> adapter (stage-first packages)
+# see: internal/pipeline/* and docs/architecture.md
+
 # Required env for init preflight: MURMEL_API_KEY, GOOGLE_MAPS_API_KEY,
 # and one of GEMINI_API_KEY / GOOGLE_API_KEY / GOOGLE_GENERATIVE_LANGUAGE_API_KEY
 go run ./cmd/scrape init --db-path ../data/spots.db --reset
@@ -35,6 +38,9 @@ go run ./cmd/scrape extract-spots --io sqlite --db-path ../data/spots.db --out-d
 
 # Geocode stage is file-mode only for now
 go run ./cmd/scrape geocode-spots --io file --in ../data/stages/extract-spots/<identity>__extract-spots__candidates.json
+
+# File-mode contracts (typed, deterministic artifacts)
+# see: docs/stage-file-contracts.md
 
 # Export smoke test
 go run ./cmd/scrape export-data --io sqlite --db-path ../data/spots.db --out ../viz/public/data/spots.json
@@ -78,8 +84,23 @@ make setup-hooks
 - `viz/public/data/spots.json` is a generated artifact
 - the frontend boundary is static JSON, not direct SQLite access
 - `scrape` enforces stage/mode validation before processing and fails non-zero with actionable guidance for unsupported combinations
+- each stage command now limits itself to CLI concerns (flags, mode validation, service invocation, user-facing errors)
 - `scrape geocode-spots --io sqlite` is intentionally unsupported in this scope; use `--io file --in <path>`
 - legacy stdlib `flag` wiring compatibility shims are intentionally removed; prefer documented urfave/cli v3 invocation forms
 - geocoder requests enforce a hard `locationRestriction.rectangle` (low `52.274525,4.711585`; high `52.461764,5.073559`)
+
+## Service package guardrails
+
+- Do not add new business logic to `scraper/internal/scraper` (deprecated location).
+- Keep stage orchestration/DTO/ports in `scraper/internal/pipeline/<stage>`.
+- Put reusable non-stage logic in explicit capability packages.
+- Keep `scraper/internal/pipeline/common` limited to cross-stage primitives.
+- Before opening a PR, verify there are no stage-package imports of `internal/scraper`:
+
+```bash
+rg "internal/scraper" scraper/internal/pipeline --glob "*.go"
+```
+
+See `docs/service-package-organization.md` for placement examples.
 
 If this document diverges from OpenSpec, treat `openspec/specs/` as the source of truth.

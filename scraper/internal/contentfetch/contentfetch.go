@@ -1,4 +1,4 @@
-package scraper
+package contentfetch
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gocolly/colly/v2"
+	"github.com/hkstm/fccentrummap/internal/articletext"
 	"github.com/hkstm/fccentrummap/internal/repository"
 )
 
@@ -113,7 +114,7 @@ func FetchAndStoreArticles(urls []string, repo *repository.Repository) error {
 			return
 		}
 
-		extractionResult := ExtractArticleTextContent(html)
+		extractionResult := articletext.ExtractArticleTextContent(html)
 		extractionResult.ArticleRawID = articleRaw.ArticleRawID
 		if err := repo.ReplaceArticleTextExtraction(extractionResult); err != nil {
 			if fetchErr == nil {
