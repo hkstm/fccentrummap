@@ -1,8 +1,9 @@
-package scraper
+package contentfetch
 
 import (
 	"testing"
 
+	"github.com/hkstm/fccentrummap/internal/articletext"
 	"github.com/hkstm/fccentrummap/internal/models"
 )
 
@@ -52,7 +53,7 @@ func TestArticleTextExtractionPersistencePipelineWithRepresentativeOutcomes(t *t
 			t.Fatalf("expected article_raw row for %s", fixture.url)
 		}
 
-		result := ExtractArticleTextContent(articleRaw.HTML)
+		result := articletext.ExtractArticleTextContent(articleRaw.HTML)
 		result.ArticleRawID = articleRaw.ArticleRawID
 		if err := repo.ReplaceArticleTextExtraction(result); err != nil {
 			t.Fatalf("replace extraction %s: %v", fixture.url, err)

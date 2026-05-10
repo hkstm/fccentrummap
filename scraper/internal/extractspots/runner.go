@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hkstm/fccentrummap/internal/articletext"
 	"github.com/hkstm/fccentrummap/internal/extraction"
 	genaiclient "github.com/hkstm/fccentrummap/internal/genai"
 	"github.com/hkstm/fccentrummap/internal/models"
 	"github.com/hkstm/fccentrummap/internal/repository"
-	scraperpkg "github.com/hkstm/fccentrummap/internal/scraper"
 )
 
 type Options struct {
@@ -226,7 +226,7 @@ func loadCleanedArticleText(repo *repository.Repository, articleRaw *models.Arti
 		return strings.Join(parts, "\n\n"), nil
 	}
 
-	fallback := scraperpkg.ExtractArticleTextContent(articleRaw.HTML)
+	fallback := articletext.ExtractArticleTextContent(articleRaw.HTML)
 	parts = make([]string, 0, len(fallback.Contents))
 	for _, c := range fallback.Contents {
 		if trimmed := strings.TrimSpace(c.Content); trimmed != "" {
