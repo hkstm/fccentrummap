@@ -3,7 +3,6 @@ package exportdata
 type Request struct {
 	DBPath     string
 	OutputPath string
-	Identity   string
 	InputPath  string
 }
 

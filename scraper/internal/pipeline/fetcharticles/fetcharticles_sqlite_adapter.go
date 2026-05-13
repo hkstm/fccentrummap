@@ -2,7 +2,6 @@ package fetcharticles
 
 import (
 	"context"
-	"strings"
 
 	"github.com/hkstm/fccentrummap/internal/contentfetch"
 	"github.com/hkstm/fccentrummap/internal/repository"
@@ -13,7 +12,7 @@ type SQLiteAdapter struct{}
 func NewSQLiteAdapter() *SQLiteAdapter { return &SQLiteAdapter{} }
 
 func (a *SQLiteAdapter) Run(_ context.Context, req Request) (Response, error) {
-	repo, err := repository.New(strings.TrimSpace(req.DBPath))
+	repo, err := repository.New(req.DBPath)
 	if err != nil {
 		return Response{}, err
 	}
@@ -21,6 +20,7 @@ func (a *SQLiteAdapter) Run(_ context.Context, req Request) (Response, error) {
 	if err := repo.InitSchema(); err != nil {
 		return Response{}, err
 	}
+
 	articles, err := repo.GetPendingArticles()
 	if err != nil {
 		return Response{}, err
@@ -32,5 +32,5 @@ func (a *SQLiteAdapter) Run(_ context.Context, req Request) (Response, error) {
 	if err := contentfetch.FetchAndStoreArticles(urls, repo); err != nil {
 		return Response{}, err
 	}
-	return Response{Identity: req.Identity, Stage: "fetcharticles", ArticleURLs: urls, FetchedCount: len(urls)}, nil
+	return Response{Identity: "fetch-articles", Stage: "fetcharticles", ArticleURLs: urls, FetchedCount: len(urls)}, nil
 }
