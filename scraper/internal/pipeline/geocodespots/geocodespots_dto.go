@@ -1,7 +1,6 @@
 package geocodespots
 
 type Request struct {
-	Identity  string
 	InputPath string
 }
 

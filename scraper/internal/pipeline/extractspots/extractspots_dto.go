@@ -1,15 +1,12 @@
 package extractspots
 
 type Request struct {
-	DBPath      string
-	OutDir      string
-	GemmaModel  string
-	APIKey      string
-	Endpoint    string
-	Identity    string
-	InputPath   string
-	UseLatest   bool
-	PersistData bool
+	DBPath     string
+	OutDir     string
+	GemmaModel string
+	APIKey     string
+	Endpoint   string
+	InputPath  string
 }
 
 type Response struct {

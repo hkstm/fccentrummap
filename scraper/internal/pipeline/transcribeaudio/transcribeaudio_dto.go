@@ -3,7 +3,6 @@ package transcribeaudio
 type Request struct {
 	DBPath    string
 	Language  string
-	Identity  string
 	InputPath string
 }
 

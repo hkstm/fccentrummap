@@ -2,7 +2,6 @@ package acquireaudio
 
 type Request struct {
 	DBPath    string
-	Identity  string
 	InputPath string
 }
 

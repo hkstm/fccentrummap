@@ -19,7 +19,7 @@ type SQLiteAdapter struct{}
 func NewSQLiteAdapter() *SQLiteAdapter { return &SQLiteAdapter{} }
 
 func (a *SQLiteAdapter) Run(ctx context.Context, req Request) (Response, error) {
-	repo, err := repository.New(strings.TrimSpace(req.DBPath))
+	repo, err := repository.New(req.DBPath)
 	if err != nil {
 		return Response{}, err
 	}
@@ -36,7 +36,7 @@ func (a *SQLiteAdapter) Run(ctx context.Context, req Request) (Response, error) 
 		return Response{}, fmt.Errorf("no audio source rows with non-empty audio_blob found")
 	}
 
-	lang := strings.TrimSpace(req.Language)
+	lang := req.Language
 	if lang == "" {
 		lang = "nl"
 	}
@@ -73,11 +73,7 @@ func (a *SQLiteAdapter) Run(ctx context.Context, req Request) (Response, error) 
 		return Response{}, err
 	}
 
-	identity := strings.TrimSpace(req.Identity)
-	if identity == "" {
-		identity = fmt.Sprintf("transcription-%d", id)
-	}
-	return Response{Identity: identity, Stage: "transcribeaudio", TranscriptionID: id}, nil
+	return Response{Identity: fmt.Sprintf("transcription-%d", id), Stage: "transcribeaudio", TranscriptionID: id}, nil
 }
 
 func defaultMurmelAPIKey() string {

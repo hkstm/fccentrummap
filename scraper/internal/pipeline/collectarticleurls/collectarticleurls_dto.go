@@ -3,7 +3,6 @@ package collectarticleurls
 type Request struct {
 	DBPath     string
 	ArticleURL string
-	Identity   string
 	InputPath  string
 }
 

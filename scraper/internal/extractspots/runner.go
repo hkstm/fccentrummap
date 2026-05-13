@@ -17,14 +17,10 @@ import (
 )
 
 type Options struct {
-	TranscriptionID int64
-	ArticleURL      string
-	UseLatest       bool
-	OutDir          string
-	GemmaModel      string
-	APIKey          string
-	Endpoint        string
-	PersistRecord   bool
+	OutDir     string
+	GemmaModel string
+	APIKey     string
+	Endpoint   string
 }
 
 type Result struct {
@@ -41,15 +37,7 @@ type Result struct {
 }
 
 func Run(ctx context.Context, repo *repository.Repository, opts Options) (*Result, error) {
-	articleURL := strings.TrimSpace(opts.ArticleURL)
-	if opts.TranscriptionID <= 0 && articleURL == "" && !opts.UseLatest {
-		return nil, fmt.Errorf("missing selector: provide transcription id, article url, or use latest")
-	}
-	if opts.TranscriptionID > 0 && articleURL != "" {
-		return nil, fmt.Errorf("choose either transcription id or article url, not both")
-	}
-
-	row, err := loadTranscriptionRow(repo, opts.TranscriptionID, articleURL, opts.UseLatest)
+	row, err := repo.GetLatestArticleAudioTranscription()
 	if err != nil {
 		return nil, fmt.Errorf("failed to select transcription: %w", err)
 	}
@@ -65,12 +53,7 @@ func Run(ctx context.Context, repo *repository.Repository, opts Options) (*Resul
 		return nil, fmt.Errorf("audio source %d linked from transcription %d not found", row.AudioSourceID, row.TranscriptionID)
 	}
 
-	var articleRaw *models.ArticleRaw
-	if articleURL != "" {
-		articleRaw, err = repo.GetArticleRawByURL(articleURL)
-	} else {
-		articleRaw, err = repo.GetArticleRawByID(audioSource.ArticleRawID)
-	}
+	articleRaw, err := repo.GetArticleRawByID(audioSource.ArticleRawID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load article row: %w", err)
 	}
@@ -169,19 +152,16 @@ func Run(ctx context.Context, repo *repository.Repository, opts Options) (*Resul
 	if err != nil {
 		return nil, fmt.Errorf("marshal final parsed response: %w", err)
 	}
-	var spotExtractionID int64
-	if opts.PersistRecord {
-		spotExtractionID, err = repo.InsertSpotExtractionRecord(models.SpotExtractionRecordInput{
-			ArticleRawID:       articleRaw.ArticleRawID,
-			TranscriptionID:    row.TranscriptionID,
-			PresenterName:      finalParsed.PresenterName,
-			PromptText:         pass1Prompt,
-			RawResponseJSON:    string(pass1Result.Body),
-			ParsedResponseJSON: string(parsedBytes),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("persist extraction record: %w", err)
-		}
+	spotExtractionID, err := repo.InsertSpotExtractionRecord(models.SpotExtractionRecordInput{
+		ArticleRawID:       articleRaw.ArticleRawID,
+		TranscriptionID:    row.TranscriptionID,
+		PresenterName:      finalParsed.PresenterName,
+		PromptText:         pass1Prompt,
+		RawResponseJSON:    string(pass1Result.Body),
+		ParsedResponseJSON: string(parsedBytes),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("persist extraction record: %w", err)
 	}
 
 	return &Result{
@@ -198,18 +178,6 @@ func Run(ctx context.Context, repo *repository.Repository, opts Options) (*Resul
 	}, nil
 }
 
-func loadTranscriptionRow(repo *repository.Repository, transcriptionID int64, articleURL string, useLatest bool) (*models.ArticleAudioTranscription, error) {
-	if transcriptionID > 0 {
-		return repo.GetArticleAudioTranscriptionByID(transcriptionID)
-	}
-	if articleURL != "" {
-		return repo.GetLatestArticleAudioTranscriptionByURL(articleURL)
-	}
-	if !useLatest {
-		return nil, nil
-	}
-	return repo.GetLatestArticleAudioTranscription()
-}
 
 func loadCleanedArticleText(repo *repository.Repository, articleRaw *models.ArticleRaw) (string, error) {
 	contents, err := repo.ListArticleTextContents(articleRaw.ArticleRawID)
