@@ -64,13 +64,13 @@ go run ./cmd/scrape export-data --io sqlite --db-path ../data/spots.db --out ../
 | Stage | `--io sqlite` | `--io file` |
 |---|---|---|
 | `init` | Supported | Not supported (error) |
-| `collect-article-urls` | Supported | Supported |
-| `fetch-articles` | Supported | Supported |
-| `acquire-audio` | Supported | Supported |
-| `transcribe-audio` | Supported | Supported |
-| `extract-spots` | Supported | Supported |
+| `collect-article-urls` | Supported | Not implemented (error; use sqlite) |
+| `fetch-articles` | Supported | Not implemented (error; use sqlite) |
+| `acquire-audio` | Supported | Not implemented (error; use sqlite) |
+| `transcribe-audio` | Supported | Not implemented (error; use sqlite) |
+| `extract-spots` | Supported | Not implemented (error; use sqlite) |
 | `geocode-spots` | Not supported (error) | Supported |
-| `export-data` | Supported | Supported |
+| `export-data` | Supported | Not implemented (error; use sqlite) |
 
 ## Notes
 

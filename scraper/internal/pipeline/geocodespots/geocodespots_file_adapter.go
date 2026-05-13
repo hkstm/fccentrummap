@@ -18,13 +18,10 @@ type inputPayload struct {
 func NewFileAdapter() *FileAdapter { return &FileAdapter{} }
 
 func (a *FileAdapter) Run(ctx context.Context, req Request) (Response, error) {
-	if strings.TrimSpace(req.InputPath) == "" {
+	if req.InputPath == "" {
 		return Response{}, fmt.Errorf("geocodespots file input requires inputPath")
 	}
-	identity := strings.TrimSpace(req.Identity)
-	if identity == "" {
-		identity = common.IdentityFromPath(req.InputPath)
-	}
+	identity := common.IdentityFromPath(req.InputPath)
 	in, err := common.ReadJSON[inputPayload](req.InputPath)
 	if err != nil {
 		return Response{}, err
