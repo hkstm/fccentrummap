@@ -21,16 +21,26 @@ func (a *SQLiteAdapter) Run(_ context.Context, req Request) (Response, error) {
 		return Response{}, err
 	}
 
-	articles, err := repo.GetPendingArticles()
+	sources, err := repo.ListArticleSources()
 	if err != nil {
 		return Response{}, err
 	}
-	urls := make([]string, 0, len(articles))
-	for _, a := range articles {
-		urls = append(urls, a.URL)
+	urls := make([]string, 0, len(sources))
+	for _, s := range sources {
+		urls = append(urls, s.URL)
 	}
-	if err := contentfetch.FetchAndStoreArticles(urls, repo); err != nil {
+	htmlByURL, err := contentfetch.FetchArticlesHTML(urls)
+	if err != nil {
 		return Response{}, err
 	}
-	return Response{Identity: "fetch-articles", Stage: "fetcharticles", ArticleURLs: urls, FetchedCount: len(urls)}, nil
+	for _, s := range sources {
+		html, ok := htmlByURL[s.URL]
+		if !ok {
+			continue
+		}
+		if _, err := repo.UpsertArticleFetch(s.ArticleSourceID, html); err != nil {
+			return Response{}, err
+		}
+	}
+	return Response{Identity: "fetch-articles", Stage: "fetcharticles", ArticleURLs: urls, FetchedCount: len(htmlByURL)}, nil
 }

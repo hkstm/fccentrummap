@@ -51,11 +51,8 @@ func TestDeterministicFixturesPromptAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read response_without_presenter fixture: %v", err)
 	}
-	parsed, err = ParseAndValidateResponse(withoutPresenter)
-	if err != nil {
-		t.Fatalf("parse response_without_presenter fixture: %v", err)
-	}
-	if parsed.PresenterName != nil {
-		t.Fatalf("expected nil presenter_name for fixture without presenter, got %+v", parsed.PresenterName)
+	_, err = ParseAndValidateResponse(withoutPresenter)
+	if err == nil {
+		t.Fatal("expected parse response_without_presenter fixture to fail due to missing presenter_name")
 	}
 }

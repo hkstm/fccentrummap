@@ -48,14 +48,14 @@ func ParseAndValidateResponse(rawBody []byte) (*ParsedResponse, error) {
 		return nil, err
 	}
 
-	if parsed.PresenterName != nil {
-		trimmed := strings.TrimSpace(*parsed.PresenterName)
-		if trimmed == "" {
-			parsed.PresenterName = nil
-		} else {
-			parsed.PresenterName = &trimmed
-		}
+	if parsed.PresenterName == nil {
+		return nil, fmt.Errorf("model output validation failed: presenter_name is required")
 	}
+	trimmed := strings.TrimSpace(*parsed.PresenterName)
+	if trimmed == "" {
+		return nil, fmt.Errorf("model output validation failed: presenter_name is required")
+	}
+	parsed.PresenterName = &trimmed
 
 	seenPlaces := make(map[string]struct{}, len(parsed.Spots))
 	for i, item := range parsed.Spots {

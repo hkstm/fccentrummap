@@ -9,10 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hkstm/fccentrummap/internal/articletext"
 	"github.com/hkstm/fccentrummap/internal/extraction"
 	genaiclient "github.com/hkstm/fccentrummap/internal/genai"
-	"github.com/hkstm/fccentrummap/internal/models"
 	"github.com/hkstm/fccentrummap/internal/repository"
 )
 
@@ -37,7 +35,7 @@ type Result struct {
 }
 
 func Run(ctx context.Context, repo *repository.Repository, opts Options) (*Result, error) {
-	row, err := repo.GetLatestArticleAudioTranscription()
+	row, err := repo.GetLatestAudioTranscription()
 	if err != nil {
 		return nil, fmt.Errorf("failed to select transcription: %w", err)
 	}
@@ -45,25 +43,9 @@ func Run(ctx context.Context, repo *repository.Repository, opts Options) (*Resul
 		return nil, fmt.Errorf("no transcription rows found")
 	}
 
-	audioSource, err := repo.GetArticleAudioSourceByID(row.AudioSourceID)
+	articleURL, articleSourceID, cleanedArticleText, err := repo.GetArticleContextByTranscriptionID(row.TranscriptionID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load audio source for transcription %d: %w", row.TranscriptionID, err)
-	}
-	if audioSource == nil {
-		return nil, fmt.Errorf("audio source %d linked from transcription %d not found", row.AudioSourceID, row.TranscriptionID)
-	}
-
-	articleRaw, err := repo.GetArticleRawByID(audioSource.ArticleRawID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load article row: %w", err)
-	}
-	if articleRaw == nil {
-		return nil, fmt.Errorf("article_raw_id=%d not found", audioSource.ArticleRawID)
-	}
-
-	cleanedArticleText, err := loadCleanedArticleText(repo, articleRaw)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load cleaned article text article_raw_id=%d: %w", articleRaw.ArticleRawID, err)
+		return nil, fmt.Errorf("failed to load article context for transcription %d: %w", row.TranscriptionID, err)
 	}
 
 	sentences, err := extraction.ParseSentenceUnits(row.ResponseJSON)
@@ -148,24 +130,28 @@ func Run(ctx context.Context, repo *repository.Repository, opts Options) (*Resul
 	}
 
 	finalParsed := extraction.ApplyRefinements(pass1Parsed, pass2Parsed)
-	parsedBytes, err := json.Marshal(finalParsed)
-	if err != nil {
+	if _, err := json.Marshal(finalParsed); err != nil {
 		return nil, fmt.Errorf("marshal final parsed response: %w", err)
 	}
-	spotExtractionID, err := repo.InsertSpotExtractionRecord(models.SpotExtractionRecordInput{
-		ArticleRawID:       articleRaw.ArticleRawID,
-		TranscriptionID:    row.TranscriptionID,
-		PresenterName:      finalParsed.PresenterName,
-		PromptText:         pass1Prompt,
-		RawResponseJSON:    string(pass1Result.Body),
-		ParsedResponseJSON: string(parsedBytes),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("persist extraction record: %w", err)
+	for _, spot := range finalParsed.Spots {
+		spotMentionID, err := repo.UpsertSpotMention(row.TranscriptionID, spot.Place, spot.SentenceStartTimestamp, spot.OriginalSentenceStartTimestamp, spot.RefinedSentenceStartTimestamp)
+		if err != nil {
+			return nil, fmt.Errorf("persist spot mention place=%s: %w", spot.Place, err)
+		}
+		_ = spotMentionID
+	}
+	if finalParsed.PresenterName != nil {
+		presenterID, err := repo.UpsertPresenter(*finalParsed.PresenterName)
+		if err != nil {
+			return nil, fmt.Errorf("persist presenter %s: %w", *finalParsed.PresenterName, err)
+		}
+		if err := repo.LinkArticlePresenter(articleSourceID, presenterID); err != nil {
+			return nil, fmt.Errorf("persist article presenter link: %w", err)
+		}
 	}
 
 	return &Result{
-		ArticleURL:             articleRaw.URL,
+		ArticleURL:             articleURL,
 		TranscriptionID:        row.TranscriptionID,
 		PresenterName:          finalParsed.PresenterName,
 		ArticleArtifactPath:    articlePath,
@@ -174,35 +160,7 @@ func Run(ctx context.Context, repo *repository.Repository, opts Options) (*Resul
 		Pass2PromptPath:        pass2PromptPath,
 		Pass1ResponsePath:      pass1ResponsePath,
 		Pass2ResponsePath:      pass2ResponsePath,
-		SpotExtractionID:       spotExtractionID,
+		SpotExtractionID:       row.TranscriptionID,
 	}, nil
 }
 
-
-func loadCleanedArticleText(repo *repository.Repository, articleRaw *models.ArticleRaw) (string, error) {
-	contents, err := repo.ListArticleTextContents(articleRaw.ArticleRawID)
-	if err != nil {
-		return "", err
-	}
-	parts := make([]string, 0, len(contents))
-	for _, content := range contents {
-		if trimmed := strings.TrimSpace(content.Content); trimmed != "" {
-			parts = append(parts, trimmed)
-		}
-	}
-	if len(parts) > 0 {
-		return strings.Join(parts, "\n\n"), nil
-	}
-
-	fallback := articletext.ExtractArticleTextContent(articleRaw.HTML)
-	parts = make([]string, 0, len(fallback.Contents))
-	for _, c := range fallback.Contents {
-		if trimmed := strings.TrimSpace(c.Content); trimmed != "" {
-			parts = append(parts, trimmed)
-		}
-	}
-	if len(parts) > 0 {
-		return strings.Join(parts, "\n\n"), nil
-	}
-	return "", fmt.Errorf("article text extraction has no non-empty cleaned content")
-}

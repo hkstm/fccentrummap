@@ -2,13 +2,10 @@ package main
 
 import "testing"
 
-func TestValidateStageModeUnsupportedGeocodeSQLite(t *testing.T) {
+func TestValidateStageModeSupportsGeocodeSQLite(t *testing.T) {
 	err := validateStageMode("geocode-spots", "sqlite")
-	if err == nil {
-		t.Fatalf("expected error for geocode-spots sqlite")
-	}
-	if got := err.Error(); got == "" {
-		t.Fatalf("expected actionable error message")
+	if err != nil {
+		t.Fatalf("expected sqlite mode support for geocode-spots, got: %v", err)
 	}
 }
 

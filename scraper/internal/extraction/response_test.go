@@ -46,7 +46,7 @@ func TestParseAndValidateResponseFromFunctionCallArgs(t *testing.T) {
 	}
 }
 
-func TestParseAndValidateResponseAllowsMissingPresenterName(t *testing.T) {
+func TestParseAndValidateResponseRejectsMissingPresenterName(t *testing.T) {
 	raw := []byte(`{
 	  "candidates": [
 	    {
@@ -68,12 +68,9 @@ func TestParseAndValidateResponseAllowsMissingPresenterName(t *testing.T) {
 	  ]
 	}`)
 
-	parsed, err := ParseAndValidateResponse(raw)
-	if err != nil {
-		t.Fatalf("ParseAndValidateResponse() error = %v", err)
-	}
-	if parsed.PresenterName != nil {
-		t.Fatalf("expected presenter_name=nil, got %+v", parsed.PresenterName)
+	_, err := ParseAndValidateResponse(raw)
+	if err == nil {
+		t.Fatal("expected error for missing presenter_name")
 	}
 }
 

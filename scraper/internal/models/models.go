@@ -2,6 +2,26 @@ package models
 
 import "time"
 
+type ArticleSource struct {
+	ArticleSourceID int64
+	URL             string
+	DiscoveredAt    time.Time
+}
+
+type ArticleFetch struct {
+	ArticleFetchID  int64
+	ArticleSourceID int64
+	HTML            string
+	FetchedAt       time.Time
+}
+
+type ArticleText struct {
+	ArticleTextID   int64
+	ArticleFetchID  int64
+	CleanedText     string
+	ExtractedAt     time.Time
+}
+
 type ArticleRaw struct {
 	ArticleRawID int64
 	URL          string

@@ -7,88 +7,81 @@ The scraper repository layer SHALL create required tables if they do not already
 
 #### Scenario: Fresh database
 - **WHEN** the program opens a new `data/spots.db`
-- **THEN** it SHALL create `articles_raw`, `authors`, `spots`, `articles`, `article_spots`, `article_audio_sources`, and `article_audio_transcriptions`
+- **THEN** it SHALL create `article_sources`, `article_fetches`, `article_texts`, `audio_sources`, `audio_transcriptions`, `spot_mentions`, `spot_google_geocodes`, `presenters`, `article_presenters`, and `article_spots`
 - **AND** it SHALL enforce uniqueness for transcription rows on `(audio_source_id, provider, language)`
+- **AND** it SHALL enforce one-row-per-source latest fetch uniqueness on `article_fetches(article_source_id)`
 
 #### Scenario: Existing database
 - **WHEN** the program opens an existing database with the required schema
 - **THEN** existing data SHALL be preserved
-- **AND** missing newly required transcription schema objects SHALL be created idempotently
+- **AND** missing newly required schema objects SHALL be created idempotently for compatible v2-era databases
+- **AND** legacy pre-v2 database files are unsupported and SHALL be reinitialized (or migrated externally) instead of in-place evolution
 
 ### Requirement: Store raw article HTML as pending work
-The repository SHALL store fetched article HTML in `articles_raw` with status `PENDING`.
+The repository SHALL store fetched article HTML as latest fetch state keyed by article source.
 
 #### Scenario: New raw article
-- **WHEN** a new article URL and HTML are inserted
-- **THEN** the repository SHALL create an `articles_raw` row with status `PENDING`
+- **WHEN** a new article URL is discovered and fetched
+- **THEN** the repository SHALL create an `article_sources` row for the URL
+- **AND** it SHALL create one `article_fetches` row for that source
 
 #### Scenario: Duplicate raw article URL
-- **WHEN** an article URL already exists in `articles_raw`
-- **THEN** the insert SHALL be skipped without error
+- **WHEN** an article URL already exists and is fetched again
+- **THEN** the repository SHALL keep one `article_sources` row for the URL
+- **AND** it SHALL upsert the existing `article_fetches` row without creating fetch history
 
-### Requirement: Query pending articles
-The repository SHALL provide access to pending raw articles for downstream processing.
+### Requirement: Query latest fetched articles for downstream processing
+The repository SHALL provide access to latest fetched article payloads for downstream processing.
 
-#### Scenario: Pending articles exist
-- **WHEN** rows with status `PENDING` exist in `articles_raw`
-- **THEN** the repository SHALL return their IDs, URLs, and HTML
+#### Scenario: Latest fetches exist
+- **WHEN** `article_fetches` rows exist for discovered sources
+- **THEN** the repository SHALL return fetch IDs, source IDs, URLs, and HTML
 
 ### Requirement: Export query supports frontend JSON generation
-The repository SHALL provide a query that joins spots, articles, and authors into export-ready data.
+The repository SHALL provide a query that joins geocoded spots, spot links, and presenters into export-ready data.
 
 #### Scenario: Exporting current map data
 - **WHEN** the exporter requests data from the repository
-- **THEN** the repository SHALL return deduplicated spot records with their coordinates and associated author names
+- **THEN** the repository SHALL return deduplicated spot records with coordinates and associated presenter names
 
-### Requirement: Failure status updates are logged
-The repository SHALL record failure status changes and log the failure reason.
+### Requirement: Stage failures are surfaced with diagnostics
+The repository layer and adapters SHALL surface write/process failures as errors with actionable context.
 
-#### Scenario: Marking a raw article as failed
-- **WHEN** article processing fails and the repository updates an `articles_raw` row to `FAILED`
-- **THEN** it SHALL refresh `updated_at`
-- **AND** it SHALL log the article ID, URL, and failure reason
+#### Scenario: Persisting a stage write fails
+- **WHEN** a stage cannot persist required data due to constraint or storage errors
+- **THEN** the call SHALL return a non-nil error with stage-relevant context
+- **AND** callers SHALL treat the stage as failed
 
-### Requirement: Store per-article audio as SQLite blobs
+### Requirement: Store per-fetch audio as SQLite blobs
 The repository SHALL support durable storage of downloaded audio payloads for article-linked videos.
 
 #### Scenario: Insert acquired audio
-- **WHEN** audio is acquired for an article-linked video
-- **THEN** the repository SHALL store an `article_audio_sources` row with `article_raw_id`, `video_id`, `youtube_url`, `audio_format`, `mime_type`, `byte_size`, and `audio_blob`
+- **WHEN** audio is acquired for an article fetch-linked video
+- **THEN** the repository SHALL store an `audio_sources` row with `article_fetch_id`, `youtube_url`, `audio_format`, `mime_type`, `byte_size`, and `audio_blob`
 
-#### Scenario: Duplicate audio for same article
-- **WHEN** an `article_audio_sources` row already exists for an `article_raw_id`
-- **THEN** the pipeline SHALL skip duplicate insertion unless explicitly forced
+#### Scenario: Duplicate audio for same fetch
+- **WHEN** an `audio_sources` row already exists for an `article_fetch_id`
+- **THEN** the repository SHALL upsert the same logical row without creating duplicate ownership records
 
-### Requirement: SQLite schema SHALL store article text extraction outcomes and content
-The repository schema SHALL include dedicated tables for article text extraction outcomes and extracted text segments linked to raw articles.
+### Requirement: SQLite schema SHALL store extracted article text content
+The repository schema SHALL include dedicated storage for extracted article text linked to latest fetch rows.
 
-#### Scenario: Fresh database initialization includes extraction tables
+#### Scenario: Fresh database initialization includes article text table
 - **WHEN** the repository initializes schema on a fresh database
-- **THEN** it SHALL create a table for extraction outcomes linked to `article_raw_id`
-- **AND** it SHALL create a table for extracted text segments linked to both `article_raw_id` and extraction outcome
+- **THEN** it SHALL create `article_texts` linked to `article_fetch_id`
 
 #### Scenario: Existing database initialization remains idempotent
 - **WHEN** the repository initializes schema on an existing database
-- **THEN** it SHALL create any missing extraction schema objects without dropping existing data
+- **THEN** it SHALL create any missing article text schema objects without dropping existing data
 - **AND** repeated initialization SHALL remain idempotent
 
-### Requirement: Repository writes SHALL replace prior extraction result per article atomically
-The repository SHALL replace prior extraction records for an article with one authoritative latest outcome in a single transaction.
+### Requirement: Repository writes SHALL preserve one authoritative text row per fetch
+The repository SHALL preserve one authoritative latest text extraction output per fetch via upsert semantics.
 
-#### Scenario: Persist successful matched extraction
-- **WHEN** a matched extraction result is saved for an article
-- **THEN** the repository SHALL replace prior extraction records for that article in one transaction
-- **AND** it SHALL persist one extraction outcome row plus associated extracted text segment rows
-
-#### Scenario: Persist no-match extraction
-- **WHEN** a no-match extraction result is saved for an article
-- **THEN** the repository SHALL persist one extraction outcome row with status `no_match`
-- **AND** it SHALL persist zero extracted text segment rows for that article
-
-#### Scenario: Persist extraction error outcome
-- **WHEN** an extraction error outcome is saved for an article
-- **THEN** the repository SHALL persist one extraction outcome row with status `error`
-- **AND** it SHALL persist error diagnostics without requiring extracted text segment rows
+#### Scenario: Persist successful extraction
+- **WHEN** extraction content is saved for an article fetch
+- **THEN** the repository SHALL upsert one `article_texts` row for that `article_fetch_id`
+- **AND** subsequent saves for the same fetch SHALL replace prior text content
 
 ### Requirement: Stage-mode support matrix is enforced by command-layer validation
 The system SHALL enforce declared stage/mode support and reject unsupported combinations before processing.
@@ -97,14 +90,6 @@ The system SHALL enforce declared stage/mode support and reject unsupported comb
 - **WHEN** a stage is requested with an unsupported I/O mode
 - **THEN** validation SHALL fail before any data mutation
 - **AND** the command SHALL return a non-zero error with guidance
-
-### Requirement: Current change defers new geocode-to-final-table SQLite writes
-This change SHALL NOT require introducing new SQLite write paths from geocode stage into final export tables.
-
-#### Scenario: Geocode stage executed in current scope
-- **WHEN** geocode stage is executed in this change scope
-- **THEN** SQLite final-table writes from geocode SHALL be treated as deferred
-- **AND** file artifact handoff SHALL remain the temporary supported contract
 
 ### Requirement: SQLite backend SHALL act as an adapter behind stage ports
 SQLite-backed persistence SHALL be accessed through stage adapter implementations that satisfy stage port contracts used by business services.

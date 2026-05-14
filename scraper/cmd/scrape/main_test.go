@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"strings"
 	"testing"
 )
 
@@ -10,10 +9,8 @@ func TestValidateStageMode(t *testing.T) {
 	if err := validateStageMode("collect-article-urls", "sqlite"); err != nil {
 		t.Fatalf("expected supported mode, got %v", err)
 	}
-	if err := validateStageMode("geocode-spots", "sqlite"); err == nil {
-		t.Fatalf("expected unsupported mode error")
-	} else if !strings.Contains(err.Error(), "use --io file --in <path>") {
-		t.Fatalf("expected actionable guidance, got %v", err)
+	if err := validateStageMode("geocode-spots", "sqlite"); err != nil {
+		t.Fatalf("expected supported mode for geocode-spots sqlite, got %v", err)
 	}
 	if err := validateStageMode("init", "file"); err == nil {
 		t.Fatalf("expected unsupported mode for init")

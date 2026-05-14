@@ -28,7 +28,7 @@ func (a *SQLiteAdapter) Run(ctx context.Context, req Request) (Response, error) 
 		return Response{}, err
 	}
 
-	src, err := repo.GetLatestArticleAudioSource()
+	src, err := repo.GetLatestAudioSource()
 	if err != nil {
 		return Response{}, err
 	}
@@ -60,7 +60,7 @@ func (a *SQLiteAdapter) Run(ctx context.Context, req Request) (Response, error) 
 		res.ErrMessage = &errMessage
 	}
 
-	id, err := repo.UpsertArticleAudioTranscription(models.ArticleAudioTranscription{
+	id, err := repo.UpsertAudioTranscription(models.ArticleAudioTranscription{
 		AudioSourceID:    src.AudioSourceID,
 		Provider:         "murmel",
 		Language:         lang,

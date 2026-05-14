@@ -22,7 +22,7 @@ func (a *SQLiteAdapter) Run(_ context.Context, req Request) (Response, error) {
 	}
 
 	if u := req.ArticleURL; u != "" {
-		if err := repo.InsertArticleRaw(u, "", nil); err != nil {
+		if _, err := repo.UpsertArticleSource(u); err != nil {
 			return Response{}, err
 		}
 		return Response{Identity: u, Stage: "collectarticleurls", URLs: []string{u}}, nil
@@ -33,7 +33,7 @@ func (a *SQLiteAdapter) Run(_ context.Context, req Request) (Response, error) {
 		return Response{}, err
 	}
 	for _, u := range urls {
-		if err := repo.InsertArticleRaw(u, "", nil); err != nil {
+		if _, err := repo.UpsertArticleSource(u); err != nil {
 			return Response{}, err
 		}
 	}

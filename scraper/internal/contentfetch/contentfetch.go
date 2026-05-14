@@ -2,13 +2,10 @@ package contentfetch
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
 	"github.com/gocolly/colly/v2"
-	"github.com/hkstm/fccentrummap/internal/articletext"
-	"github.com/hkstm/fccentrummap/internal/repository"
 )
 
 const baseURL = "https://fccentrum.nl/categorie/spots/"
@@ -61,7 +58,7 @@ func CrawlArticleURLs() ([]string, error) {
 	return urls, nil
 }
 
-func FetchAndStoreArticles(urls []string, repo *repository.Repository) error {
+func FetchArticlesHTML(urls []string) (map[string]string, error) {
 	c := colly.NewCollector(
 		colly.AllowedDomains("fccentrum.nl"),
 	)
@@ -71,6 +68,7 @@ func FetchAndStoreArticles(urls []string, repo *repository.Repository) error {
 	})
 
 	var fetchErr error
+	results := make(map[string]string, len(urls))
 
 	c.OnError(func(r *colly.Response, err error) {
 		if fetchErr != nil {
@@ -84,51 +82,7 @@ func FetchAndStoreArticles(urls []string, repo *repository.Repository) error {
 	})
 
 	c.OnResponse(func(r *colly.Response) {
-		html := string(r.Body)
-		videoID, ok := ExtractYouTubeVideoID(html)
-		var maybeVideoID *string
-		if ok {
-			maybeVideoID = &videoID
-		}
-
-		if err := repo.InsertArticleRaw(r.Request.URL.String(), html, maybeVideoID); err != nil {
-			if fetchErr == nil {
-				fetchErr = fmt.Errorf("storing article %s: %w", r.Request.URL, err)
-			}
-			return
-		}
-
-		articleRaw, err := repo.GetArticleRawByURL(r.Request.URL.String())
-		if err != nil {
-			if fetchErr == nil {
-				fetchErr = fmt.Errorf("lookup article_raw after insert %s: %w", r.Request.URL.String(), err)
-			}
-			log.Printf("ERROR: lookup article_raw after insert failed url=%s reason=%v", r.Request.URL.String(), err)
-			return
-		}
-		if articleRaw == nil {
-			if fetchErr == nil {
-				fetchErr = fmt.Errorf("lookup article_raw after insert %s: missing row", r.Request.URL.String())
-			}
-			log.Printf("ERROR: article_raw missing after insert url=%s", r.Request.URL.String())
-			return
-		}
-
-		extractionResult := articletext.ExtractArticleTextContent(html)
-		extractionResult.ArticleRawID = articleRaw.ArticleRawID
-		if err := repo.ReplaceArticleTextExtraction(extractionResult); err != nil {
-			if fetchErr == nil {
-				fetchErr = fmt.Errorf("persisting article text extraction article_raw_id=%d url=%s: %w", articleRaw.ArticleRawID, r.Request.URL.String(), err)
-			}
-			log.Printf("ERROR: persisting article text extraction failed article_raw_id=%d url=%s reason=%v", articleRaw.ArticleRawID, r.Request.URL.String(), err)
-			return
-		}
-
-		if extractionResult.ErrorMessage != nil {
-			log.Printf("INFO: article text extraction article_raw_id=%d url=%s status=%s mode=%s matched_count=%d error=%s", articleRaw.ArticleRawID, r.Request.URL.String(), extractionResult.Status, extractionResult.ExtractionMode, extractionResult.MatchedCount, *extractionResult.ErrorMessage)
-			return
-		}
-		log.Printf("INFO: article text extraction article_raw_id=%d url=%s status=%s mode=%s matched_count=%d", articleRaw.ArticleRawID, r.Request.URL.String(), extractionResult.Status, extractionResult.ExtractionMode, extractionResult.MatchedCount)
+		results[r.Request.URL.String()] = string(r.Body)
 	})
 
 	for _, url := range urls {
@@ -136,10 +90,13 @@ func FetchAndStoreArticles(urls []string, repo *repository.Repository) error {
 			break
 		}
 		if err := c.Visit(url); err != nil {
-			return fmt.Errorf("fetching article %s: %w", url, err)
+			return nil, fmt.Errorf("fetching article %s: %w", url, err)
 		}
 	}
 	c.Wait()
-
-	return fetchErr
+	if fetchErr != nil {
+		return nil, fetchErr
+	}
+	return results, nil
 }
+

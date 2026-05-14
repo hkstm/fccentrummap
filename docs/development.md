@@ -32,11 +32,13 @@ go run ./cmd/scrape <stage> --help
 go run ./cmd/scrape init --db-path ../data/spots.db --reset
 go run ./cmd/scrape collect-article-urls --io sqlite --db-path ../data/spots.db --article-url "<FCCENTRUM_ARTICLE_URL>"
 go run ./cmd/scrape fetch-articles --io sqlite --db-path ../data/spots.db
+go run ./cmd/scrape extract-article-text --io sqlite --db-path ../data/spots.db
 go run ./cmd/scrape acquire-audio --io sqlite --db-path ../data/spots.db
 go run ./cmd/scrape transcribe-audio --io sqlite --db-path ../data/spots.db --language nl
 go run ./cmd/scrape extract-spots --io sqlite --db-path ../data/spots.db --out-dir ../data
+go run ./cmd/scrape geocode-spots --io sqlite --db-path ../data/spots.db
 
-# Geocode stage is file-mode only for now
+# Optional file-mode geocode input contract
 go run ./cmd/scrape geocode-spots --io file --in ../data/stages/extract-spots/<identity>__extract-spots__candidates.json
 
 # File-mode contracts (typed, deterministic artifacts)
@@ -85,7 +87,8 @@ make setup-hooks
 - the frontend boundary is static JSON, not direct SQLite access
 - `scrape` enforces stage/mode validation before processing and fails non-zero with actionable guidance for unsupported combinations
 - each stage command now limits itself to CLI concerns (flags, mode validation, service invocation, user-facing errors)
-- `scrape geocode-spots --io sqlite` is intentionally unsupported in this scope; use `--io file --in <path>`
+- `geocode-spots` supports both sqlite and file modes
+- existing SQLite files from legacy schema are unsupported; reinitialize with `scrape init --reset`
 - legacy stdlib `flag` wiring compatibility shims are intentionally removed; prefer documented urfave/cli v3 invocation forms
 - geocoder requests enforce a hard `locationRestriction.rectangle` (low `52.274525,4.711585`; high `52.461764,5.073559`)
 
