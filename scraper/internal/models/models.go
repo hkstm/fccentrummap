@@ -129,11 +129,14 @@ type ArticleSpot struct {
 }
 
 type ExportSpot struct {
-	Name    string   `json:"name"`
-	Address string   `json:"address"`
-	Lat     float64  `json:"lat"`
-	Lng     float64  `json:"lng"`
-	Authors []string `json:"authors"`
+	PlaceID       string `json:"placeId"`
+	SpotName      string `json:"spotName"`
+	PresenterName string `json:"presenterName"`
+	YouTubeLink   string `json:"youtubeLink"`
+}
+
+type ExportPresenter struct {
+	PresenterName string `json:"presenterName"`
 }
 
 type SpotExtractionRecordInput struct {
@@ -157,6 +160,6 @@ type SpotExtractionRecord struct {
 }
 
 type ExportData struct {
-	Authors []string     `json:"authors"`
-	Spots   []ExportSpot `json:"spots"`
+	Spots      []ExportSpot      `json:"spots"`
+	Presenters []ExportPresenter `json:"presenters"`
 }

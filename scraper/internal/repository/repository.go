@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/url"
+	"slices"
+	"strings"
 
 	"github.com/hkstm/fccentrummap/internal/models"
 	sqlite "modernc.org/sqlite"
@@ -573,60 +576,55 @@ func (r *Repository) ListArticleFetches() ([]models.ArticleFetch, error) {
 func (r *Repository) ExportData() (*models.ExportData, error) {
 	rows, err := r.db.Query(`
 		SELECT
+			COALESCE(sgg.google_place_id, ''),
 			COALESCE(sm.place, ''),
-			COALESCE(sgg.formatted_address, ''),
-			sgg.latitude,
-			sgg.longitude,
-			COALESCE(p.presenter_name, '')
+			NULLIF(p.presenter_name, ''),
+			COALESCE(aus.youtube_url, ''),
+			sm.refined_sentence_start_timestamp,
+			sm.original_sentence_start_timestamp,
+			sm.sentence_start_timestamp
 		FROM article_spots asp
 		JOIN spot_google_geocodes sgg ON sgg.spot_google_geocode_id = asp.spot_google_geocode_id
 		JOIN spot_mentions sm ON sm.spot_mention_id = sgg.spot_mention_id
+		JOIN audio_transcriptions tr ON tr.transcription_id = sm.transcription_id
+		JOIN audio_sources aus ON aus.audio_source_id = tr.audio_source_id
 		LEFT JOIN article_presenters ap ON ap.article_source_id = asp.article_source_id
 		LEFT JOIN presenters p ON p.presenter_id = ap.presenter_id
-		ORDER BY sm.place, sgg.formatted_address, p.presenter_name
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("querying export data: %w", err)
 	}
 	defer rows.Close()
 
-	data := &models.ExportData{}
-	authorSet := make(map[string]struct{})
-	spotIndex := make(map[string]int)
+	data := &models.ExportData{
+		Spots:      []models.ExportSpot{},
+		Presenters: []models.ExportPresenter{},
+	}
+	presenterSet := make(map[string]struct{})
 
 	for rows.Next() {
 		var (
-			name    string
-			address string
-			lat     float64
-			lng     float64
-			author  string
+			spot            models.ExportSpot
+			rawYouTubeLink  string
+			refinedTS       sql.NullFloat64
+			originalTS      sql.NullFloat64
+			sentenceStartTS sql.NullFloat64
 		)
-		if err := rows.Scan(&name, &address, &lat, &lng, &author); err != nil {
+		var presenterName sql.NullString
+		if err := rows.Scan(&spot.PlaceID, &spot.SpotName, &presenterName, &rawYouTubeLink, &refinedTS, &originalTS, &sentenceStartTS); err != nil {
 			return nil, fmt.Errorf("scanning export row: %w", err)
 		}
-
-		if _, ok := authorSet[author]; !ok {
-			authorSet[author] = struct{}{}
-			data.Authors = append(data.Authors, author)
+		if presenterName.Valid {
+			spot.PresenterName = presenterName.String
 		}
+		spot.YouTubeLink = withYouTubeTimestamp(rawYouTubeLink, refinedTS, originalTS, sentenceStartTS)
+		data.Spots = append(data.Spots, spot)
 
-		key := name + "\x00" + address
-		idx, ok := spotIndex[key]
-		if !ok {
-			data.Spots = append(data.Spots, models.ExportSpot{
-				Name:    name,
-				Address: address,
-				Lat:     lat,
-				Lng:     lng,
-				Authors: []string{},
-			})
-			idx = len(data.Spots) - 1
-			spotIndex[key] = idx
-		}
-		spot := &data.Spots[idx]
-		if len(spot.Authors) == 0 || spot.Authors[len(spot.Authors)-1] != author {
-			spot.Authors = append(spot.Authors, author)
+		if presenterName.Valid {
+			if _, ok := presenterSet[presenterName.String]; !ok {
+				presenterSet[presenterName.String] = struct{}{}
+				data.Presenters = append(data.Presenters, models.ExportPresenter{PresenterName: presenterName.String})
+			}
 		}
 	}
 
@@ -634,5 +632,83 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 		return nil, fmt.Errorf("iterating export rows: %w", err)
 	}
 
+	slices.SortFunc(data.Spots, func(a, b models.ExportSpot) int {
+		if a.PlaceID < b.PlaceID {
+			return -1
+		}
+		if a.PlaceID > b.PlaceID {
+			return 1
+		}
+		if a.PresenterName < b.PresenterName {
+			return -1
+		}
+		if a.PresenterName > b.PresenterName {
+			return 1
+		}
+		if a.SpotName < b.SpotName {
+			return -1
+		}
+		if a.SpotName > b.SpotName {
+			return 1
+		}
+		if a.YouTubeLink < b.YouTubeLink {
+			return -1
+		}
+		if a.YouTubeLink > b.YouTubeLink {
+			return 1
+		}
+		return 0
+	})
+	slices.SortFunc(data.Presenters, func(a, b models.ExportPresenter) int {
+		if a.PresenterName < b.PresenterName {
+			return -1
+		}
+		if a.PresenterName > b.PresenterName {
+			return 1
+		}
+		return 0
+	})
+
 	return data, nil
+}
+
+func withYouTubeTimestamp(raw string, refinedTS, originalTS, sentenceStartTS sql.NullFloat64) string {
+	ts := pickTimestamp(refinedTS, originalTS, sentenceStartTS)
+	if ts == nil || *ts < 0 {
+		return raw
+	}
+	videoID := extractYouTubeVideoID(raw)
+	if videoID == "" {
+		return raw
+	}
+	return fmt.Sprintf("https://youtu.be/%s?t=%d", videoID, int(*ts))
+}
+
+func pickTimestamp(refinedTS, originalTS, sentenceStartTS sql.NullFloat64) *float64 {
+	if refinedTS.Valid {
+		return &refinedTS.Float64
+	}
+	if originalTS.Valid {
+		return &originalTS.Float64
+	}
+	if sentenceStartTS.Valid {
+		return &sentenceStartTS.Float64
+	}
+	return nil
+}
+
+func extractYouTubeVideoID(raw string) string {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return ""
+	}
+	host := strings.ToLower(u.Host)
+	switch host {
+	case "youtu.be", "www.youtu.be":
+		return strings.TrimPrefix(u.Path, "/")
+	case "youtube.com", "www.youtube.com", "m.youtube.com":
+		return strings.TrimSpace(u.Query().Get("v"))
+	default:
+		return ""
+	}
 }
