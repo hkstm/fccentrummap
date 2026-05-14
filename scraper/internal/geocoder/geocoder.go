@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	ErrMissingAPIKey = errors.New("missing GOOGLE_MAPS_API_KEY")
+	ErrMissingAPIKey = errors.New("missing PRODUCTION_GOOGLE_MAPS_API_KEY")
 	ErrEmptyQuery    = errors.New("place query is required")
 	ErrNoResults     = errors.New("no place match found within enforced location restriction")
 )
@@ -43,7 +43,7 @@ type Geocoder struct {
 }
 
 func New() (*Geocoder, error) {
-	apiKey := strings.TrimSpace(os.Getenv("GOOGLE_MAPS_API_KEY"))
+	apiKey := strings.TrimSpace(os.Getenv("PRODUCTION_GOOGLE_MAPS_API_KEY"))
 	if apiKey == "" {
 		return nil, ErrMissingAPIKey
 	}

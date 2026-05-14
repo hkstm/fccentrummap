@@ -29,7 +29,7 @@ This document summarizes the typed file-mode contracts used by the stage adapter
 - `geocode-spots`
   - input: `{ "query": "..." }`
   - output: `{ "identity": "...", "stage": "geocodespots", "query": "...", "coordinates": {...} }`
-  - note: file-mode geocoding requires `GOOGLE_MAPS_API_KEY`
+  - note: file-mode geocoding requires `PRODUCTION_GOOGLE_MAPS_API_KEY`
 - `export-data`
   - input: `{ "authors": [...], "spots": [...] }`
   - output: `{ "identity": "...", "stage": "exportdata", "authors": [...], "spots": [...] }`
@@ -39,4 +39,4 @@ This document summarizes the typed file-mode contracts used by the stage adapter
 - SQLite mode is the canonical integrity backend.
 - File mode is for deterministic handoff/debugging and cannot fully replicate DB constraints.
 - `geocode-spots --io sqlite` is supported for canonical DB persistence; file mode remains useful for deterministic handoff/debugging.
-- `geocode-spots --io file` still requires `GOOGLE_MAPS_API_KEY`.
+- `geocode-spots --io file` still requires `PRODUCTION_GOOGLE_MAPS_API_KEY`.

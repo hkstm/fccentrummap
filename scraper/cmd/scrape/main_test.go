@@ -22,7 +22,7 @@ func TestValidateStageMode(t *testing.T) {
 
 func TestValidateRequiredEnv(t *testing.T) {
 	t.Setenv("MURMEL_API_KEY", "")
-	t.Setenv("GOOGLE_MAPS_API_KEY", "")
+	t.Setenv("PRODUCTION_GOOGLE_MAPS_API_KEY", "")
 	t.Setenv("GEMINI_API_KEY", "")
 	t.Setenv("GOOGLE_API_KEY", "")
 	t.Setenv("GOOGLE_GENERATIVE_LANGUAGE_API_KEY", "")
@@ -32,7 +32,7 @@ func TestValidateRequiredEnv(t *testing.T) {
 	}
 
 	t.Setenv("MURMEL_API_KEY", "x")
-	t.Setenv("GOOGLE_MAPS_API_KEY", "y")
+	t.Setenv("PRODUCTION_GOOGLE_MAPS_API_KEY", "y")
 	t.Setenv("GOOGLE_API_KEY", "z")
 	if err := validateRequiredEnv(); err != nil {
 		t.Fatalf("expected success, got error: %v", err)

@@ -338,8 +338,8 @@ func validateRequiredEnv() error {
 	if strings.TrimSpace(os.Getenv("MURMEL_API_KEY")) == "" {
 		missing = append(missing, "MURMEL_API_KEY")
 	}
-	if strings.TrimSpace(os.Getenv("GOOGLE_MAPS_API_KEY")) == "" {
-		missing = append(missing, "GOOGLE_MAPS_API_KEY")
+	if strings.TrimSpace(os.Getenv("PRODUCTION_GOOGLE_MAPS_API_KEY")) == "" {
+		missing = append(missing, "PRODUCTION_GOOGLE_MAPS_API_KEY")
 	}
 	hasGeminiKey := strings.TrimSpace(os.Getenv("GEMINI_API_KEY")) != "" || strings.TrimSpace(os.Getenv("GOOGLE_API_KEY")) != "" || strings.TrimSpace(os.Getenv("GOOGLE_GENERATIVE_LANGUAGE_API_KEY")) != ""
 	if !hasGeminiKey {

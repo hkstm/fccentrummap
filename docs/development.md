@@ -27,7 +27,7 @@ go run ./cmd/scrape <stage> --help
 # Architecture: CLI -> service -> adapter (stage-first packages)
 # see: internal/pipeline/* and docs/architecture.md
 
-# Required env for init preflight: MURMEL_API_KEY, GOOGLE_MAPS_API_KEY,
+# Required env for init preflight: MURMEL_API_KEY, PRODUCTION_GOOGLE_MAPS_API_KEY,
 # and one of GEMINI_API_KEY / GOOGLE_API_KEY / GOOGLE_GENERATIVE_LANGUAGE_API_KEY
 go run ./cmd/scrape init --db-path ../data/spots.db --reset
 go run ./cmd/scrape collect-article-urls --io sqlite --db-path ../data/spots.db --article-url "<FCCENTRUM_ARTICLE_URL>"
@@ -54,7 +54,7 @@ go build ./...
 ## Environment variables
 
 - `MURMEL_API_KEY` (required by `cmd/scrape init` preflight and transcription)
-- `GOOGLE_MAPS_API_KEY` (required by `cmd/scrape init` preflight and geocode)
+- `PRODUCTION_GOOGLE_MAPS_API_KEY` (required by `cmd/scrape init` preflight and geocode)
 - one of `GEMINI_API_KEY` / `GOOGLE_API_KEY` / `GOOGLE_GENERATIVE_LANGUAGE_API_KEY` (required by `cmd/scrape init` preflight)
 - `GOOGLE_PLACES_TEXT_SEARCH_ENDPOINT` (optional override for geocoder endpoint; useful for local testing)
 
