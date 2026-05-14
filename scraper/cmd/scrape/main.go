@@ -265,6 +265,8 @@ func geocodeSpotsCommand() *cli.Command {
 			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite|file"},
 			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database (sqlite mode)"},
 			&cli.StringFlag{Name: "in", Usage: "required for --io file"},
+			&cli.BoolFlag{Name: "export-json", Value: false, Usage: "also export scraping data JSON after geocoding (sqlite mode only)"},
+			&cli.StringFlag{Name: "export-out", Value: filepath.Clean("../viz/public/data/spots.json"), Usage: "JSON export output path"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			mode := cmd.String("io")
@@ -281,6 +283,22 @@ func geocodeSpotsCommand() *cli.Command {
 				return err
 			}
 			fmt.Printf("artifact=%s\n", res.OutputPath)
+
+			if cmd.Bool("export-json") {
+				if mode != ioSQLite {
+					return fmt.Errorf("--export-json requires --io sqlite")
+				}
+				exportReq, err := normalizeExportDataRequest(cmd.String("db-path"), cmd.String("export-out"))
+				if err != nil {
+					return err
+				}
+				exportSvc := exportdata.NewService(exportdata.NewSQLiteAdapter(), exportdata.NewFileAdapter())
+				exportRes, err := exportSvc.Run(ctx, mode, exportReq)
+				if err != nil {
+					return err
+				}
+				fmt.Printf("exported=%s\n", exportRes.OutputPath)
+			}
 			return nil
 		},
 	}
