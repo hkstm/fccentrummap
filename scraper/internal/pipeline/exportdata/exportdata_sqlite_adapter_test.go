@@ -78,7 +78,7 @@ func TestSQLiteAdapterWritesJSONToCustomOutputPath(t *testing.T) {
 		t.Fatalf("ReadFile: %v", err)
 	}
 	got := string(b)
-	for _, required := range []string{"\"spots\"", "\"presenters\"", "\"placeId\"", "\"spotName\"", "\"presenterName\"", "\"youtubeLink\""} {
+	for _, required := range []string{"\"spots\"", "\"presenters\"", "\"placeId\"", "\"spotName\"", "\"presenterName\"", "\"latitude\"", "\"longitude\"", "\"youtubeLink\"", "\"articleUrl\""} {
 		if !strings.Contains(got, required) {
 			t.Fatalf("expected %s in output: %s", required, got)
 		}

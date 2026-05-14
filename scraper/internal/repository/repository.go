@@ -579,7 +579,10 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 			COALESCE(sgg.google_place_id, ''),
 			COALESCE(sm.place, ''),
 			NULLIF(p.presenter_name, ''),
+			sgg.latitude,
+			sgg.longitude,
 			COALESCE(aus.youtube_url, ''),
+			COALESCE(s.url, ''),
 			sm.refined_sentence_start_timestamp,
 			sm.original_sentence_start_timestamp,
 			sm.sentence_start_timestamp
@@ -588,6 +591,7 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 		JOIN spot_mentions sm ON sm.spot_mention_id = sgg.spot_mention_id
 		JOIN audio_transcriptions tr ON tr.transcription_id = sm.transcription_id
 		JOIN audio_sources aus ON aus.audio_source_id = tr.audio_source_id
+		JOIN article_sources s ON s.article_source_id = asp.article_source_id
 		LEFT JOIN article_presenters ap ON ap.article_source_id = asp.article_source_id
 		LEFT JOIN presenters p ON p.presenter_id = ap.presenter_id
 	`)
@@ -611,7 +615,7 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 			sentenceStartTS sql.NullFloat64
 		)
 		var presenterName sql.NullString
-		if err := rows.Scan(&spot.PlaceID, &spot.SpotName, &presenterName, &rawYouTubeLink, &refinedTS, &originalTS, &sentenceStartTS); err != nil {
+		if err := rows.Scan(&spot.PlaceID, &spot.SpotName, &presenterName, &spot.Latitude, &spot.Longitude, &rawYouTubeLink, &spot.ArticleURL, &refinedTS, &originalTS, &sentenceStartTS); err != nil {
 			return nil, fmt.Errorf("scanning export row: %w", err)
 		}
 		if presenterName.Valid {

@@ -129,10 +129,13 @@ type ArticleSpot struct {
 }
 
 type ExportSpot struct {
-	PlaceID       string `json:"placeId"`
-	SpotName      string `json:"spotName"`
-	PresenterName string `json:"presenterName"`
-	YouTubeLink   string `json:"youtubeLink"`
+	PlaceID       string  `json:"placeId"`
+	SpotName      string  `json:"spotName"`
+	PresenterName string  `json:"presenterName"`
+	Latitude      float64 `json:"latitude"`
+	Longitude     float64 `json:"longitude"`
+	YouTubeLink   string  `json:"youtubeLink"`
+	ArticleURL    string  `json:"articleUrl"`
 }
 
 type ExportPresenter struct {
