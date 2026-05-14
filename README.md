@@ -1,6 +1,6 @@
 # fccentrummap
 
-FC Centrum map data pipeline and future visualization app.
+FC Centrum map data pipeline and visualization app.
 
 ## Single source of truth
 
@@ -18,7 +18,7 @@ Use other Markdown files for explanation and workflow help, not as competing sou
 ├── docs/        # supporting documentation
 ├── openspec/    # canonical specs and change history
 ├── scraper/     # Go module for scraping and export
-└── viz/         # future frontend area
+└── viz/         # frontend map application
 ```
 
 ## Canonical commands

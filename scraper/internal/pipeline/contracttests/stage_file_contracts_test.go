@@ -52,8 +52,8 @@ func TestFileAdaptersContractValidationAndOutput(t *testing.T) {
 		t.Fatalf("expected exportdata file adapter to return not implemented")
 	}
 
-	t.Setenv("GOOGLE_MAPS_API_KEY", "")
+	t.Setenv("PRODUCTION_GOOGLE_MAPS_API_KEY", "")
 	if _, err := geocodespots.NewFileAdapter().Run(ctx, geocodespots.Request{InputPath: writeJSON(t, dir, "geocode.json", map[string]any{"query": "Amsterdam"})}); err == nil {
-		t.Fatalf("expected geocodespots file adapter to fail without GOOGLE_MAPS_API_KEY")
+		t.Fatalf("expected geocodespots file adapter to fail without PRODUCTION_GOOGLE_MAPS_API_KEY")
 	}
 }

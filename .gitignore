@@ -14,3 +14,11 @@
 *.csv
 scraper/scraper
 scraper/export
+
+# UI/dev artifacts
+.playwright/
+.playwright-cli/
+viz/node_modules/
+viz/.next/
+viz/out/
+viz/tsconfig.tsbuildinfo
