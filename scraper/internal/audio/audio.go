@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hkstm/fccentrummap/internal/models"
-	"github.com/hkstm/fccentrummap/internal/repository"
 )
 
 var acceptedAudioFormats = map[string]string{
@@ -122,70 +120,3 @@ func cleanupTempAudio(path string) {
 	}
 }
 
-func AcquireAndStoreAudio(ctx context.Context, repo *repository.Repository, downloader AudioDownloader) error {
-	if downloader == nil {
-		downloader = &YTDLPDownloader{}
-	}
-
-	articles, err := repo.GetPendingArticles()
-	if err != nil {
-		return fmt.Errorf("loading pending articles: %w", err)
-	}
-
-	failures := 0
-	for _, article := range articles {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("audio acquisition canceled: %w", ctx.Err())
-		default:
-		}
-
-		if article.VideoID == nil || *article.VideoID == "" {
-			continue
-		}
-
-		exists, err := repo.ArticleAudioSourceExists(article.ArticleRawID)
-		if err != nil {
-			return err
-		}
-		if exists {
-			continue
-		}
-
-		audio, err := downloader.Download(ctx, *article.VideoID)
-		if err != nil {
-			failures++
-			log.Printf("ERROR: audio acquisition failed article_raw_id=%d url=%s video_id=%s reason=%v", article.ArticleRawID, article.URL, *article.VideoID, err)
-			continue
-		}
-
-		blob, err := os.ReadFile(audio.Path)
-		cleanupTempAudio(audio.Path)
-		if err != nil {
-			failures++
-			log.Printf("ERROR: reading downloaded audio failed article_raw_id=%d path=%s reason=%v", article.ArticleRawID, audio.Path, err)
-			continue
-		}
-
-		src := models.ArticleAudioSource{
-			ArticleRawID: article.ArticleRawID,
-			VideoID:      *article.VideoID,
-			YouTubeURL:   audio.YouTubeURL,
-			AudioFormat:  audio.Format,
-			MIMEType:     audio.MIMEType,
-			AudioBlob:    blob,
-			ByteSize:     int64(len(blob)),
-		}
-
-		if err := repo.InsertArticleAudioSource(src); err != nil {
-			failures++
-			log.Printf("ERROR: storing audio blob failed article_raw_id=%d reason=%v", article.ArticleRawID, err)
-			continue
-		}
-	}
-
-	if failures > 0 {
-		return fmt.Errorf("audio acquisition encountered %d failure(s); see logs for retry details", failures)
-	}
-	return nil
-}

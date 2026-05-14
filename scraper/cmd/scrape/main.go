@@ -12,6 +12,7 @@ import (
 	"github.com/hkstm/fccentrummap/internal/pipeline/acquireaudio"
 	"github.com/hkstm/fccentrummap/internal/pipeline/collectarticleurls"
 	"github.com/hkstm/fccentrummap/internal/pipeline/exportdata"
+	"github.com/hkstm/fccentrummap/internal/pipeline/extractarticletext"
 	"github.com/hkstm/fccentrummap/internal/pipeline/extractspots"
 	"github.com/hkstm/fccentrummap/internal/pipeline/fetcharticles"
 	"github.com/hkstm/fccentrummap/internal/pipeline/geocodespots"
@@ -35,6 +36,7 @@ func main() {
 			initCommand(),
 			collectArticleURLsCommand(),
 			fetchArticlesCommand(),
+			extractArticleTextCommand(),
 			acquireAudioCommand(),
 			transcribeAudioCommand(),
 			extractSpotsCommand(),
@@ -143,6 +145,31 @@ func fetchArticlesCommand() *cli.Command {
 	}
 }
 
+func extractArticleTextCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "extract-article-text",
+		Usage: "Extract and persist cleaned article text",
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite (file not supported yet)"},
+			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database"},
+		},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			mode := cmd.String("io")
+			if err := validateStageMode("extract-article-text", mode); err != nil {
+				return err
+			}
+			req := extractarticletext.Request{DBPath: strings.TrimSpace(cmd.String("db-path"))}
+			svc := extractarticletext.NewService(extractarticletext.NewSQLiteAdapter(), extractarticletext.NewFileAdapter())
+			res, err := svc.Run(ctx, mode, req)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("processed %d article texts\n", res.ProcessedCount)
+			return nil
+		},
+	}
+}
+
 func acquireAudioCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "acquire-audio",
@@ -236,6 +263,7 @@ func geocodeSpotsCommand() *cli.Command {
 		Usage: "Geocode extracted place candidates",
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite|file"},
+			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database (sqlite mode)"},
 			&cli.StringFlag{Name: "in", Usage: "required for --io file"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
@@ -243,7 +271,7 @@ func geocodeSpotsCommand() *cli.Command {
 			if err := validateStageMode("geocode-spots", mode); err != nil {
 				return err
 			}
-			req, err := normalizeGeocodeSpotsRequest(mode, cmd.String("in"))
+			req, err := normalizeGeocodeSpotsRequest(mode, cmd.String("db-path"), cmd.String("in"))
 			if err != nil {
 				return err
 			}
@@ -348,8 +376,8 @@ func normalizeExtractSpotsRequest(dbPath, outDir, gemmaModel string) (extractspo
 	return req, nil
 }
 
-func normalizeGeocodeSpotsRequest(mode, inputPath string) (geocodespots.Request, error) {
-	req := geocodespots.Request{InputPath: strings.TrimSpace(inputPath)}
+func normalizeGeocodeSpotsRequest(mode, dbPath, inputPath string) (geocodespots.Request, error) {
+	req := geocodespots.Request{DBPath: strings.TrimSpace(dbPath), InputPath: strings.TrimSpace(inputPath)}
 	if mode == ioFile && req.InputPath == "" {
 		return geocodespots.Request{}, fmt.Errorf("geocodespots file input requires inputPath")
 	}
@@ -373,16 +401,14 @@ func validateStageMode(stage, mode string) error {
 		"init":                 {ioSQLite: true},
 		"collect-article-urls": {ioSQLite: true},
 		"fetch-articles":       {ioSQLite: true},
+		"extract-article-text": {ioSQLite: true},
 		"acquire-audio":        {ioSQLite: true},
 		"transcribe-audio":     {ioSQLite: true},
 		"extract-spots":        {ioSQLite: true},
-		"geocode-spots":        {ioFile: true},
+		"geocode-spots":        {ioSQLite: true, ioFile: true},
 		"export-data":          {ioSQLite: true},
 	}
 	if !supported[stage][mode] {
-		if stage == "geocode-spots" && mode == ioSQLite {
-			return fmt.Errorf("geocode-spots does not support --io sqlite yet; use --io file --in <path>")
-		}
 		return fmt.Errorf("stage %s does not support --io %s", stage, mode)
 	}
 	return nil

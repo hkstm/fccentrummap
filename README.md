@@ -47,12 +47,13 @@ go run ./cmd/scrape init --db-path ../data/spots.db --reset
 # SQLite-first stages
 go run ./cmd/scrape collect-article-urls --io sqlite --db-path ../data/spots.db --article-url "<FCCENTRUM_ARTICLE_URL>"
 go run ./cmd/scrape fetch-articles --io sqlite --db-path ../data/spots.db
+go run ./cmd/scrape extract-article-text --io sqlite --db-path ../data/spots.db
 go run ./cmd/scrape acquire-audio --io sqlite --db-path ../data/spots.db
 go run ./cmd/scrape transcribe-audio --io sqlite --db-path ../data/spots.db --language nl
 go run ./cmd/scrape extract-spots --io sqlite --db-path ../data/spots.db --out-dir ../data
+go run ./cmd/scrape geocode-spots --io sqlite --db-path ../data/spots.db
 
-# Geocode is file-mode only in this change scope
-# (sqlite mode fails with explicit guidance)
+# Optional file-mode geocode input path
 go run ./cmd/scrape geocode-spots --io file --in ../data/stages/extract-spots/<identity>__extract-spots__candidates.json
 
 # Export smoke test (can succeed even with null payload during scaffold phase)
@@ -66,10 +67,11 @@ go run ./cmd/scrape export-data --io sqlite --db-path ../data/spots.db --out ../
 | `init` | Supported | Not supported (error) |
 | `collect-article-urls` | Supported | Not implemented (error; use sqlite) |
 | `fetch-articles` | Supported | Not implemented (error; use sqlite) |
+| `extract-article-text` | Supported | Not implemented (error; use sqlite) |
 | `acquire-audio` | Supported | Not implemented (error; use sqlite) |
 | `transcribe-audio` | Supported | Not implemented (error; use sqlite) |
 | `extract-spots` | Supported | Not implemented (error; use sqlite) |
-| `geocode-spots` | Not supported (error) | Supported |
+| `geocode-spots` | Supported | Supported |
 | `export-data` | Supported | Not implemented (error; use sqlite) |
 
 ## Notes
@@ -103,5 +105,6 @@ make setup-hooks
 
 - `docs/architecture.md`
 - `docs/development.md`
+- `docs/scraper-v2-schema-migration.md`
 - `docs/frontend-portability.md`
 - `viz/README.md`

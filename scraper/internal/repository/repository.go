@@ -5,9 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
-	"regexp"
-	"time"
 
 	"github.com/hkstm/fccentrummap/internal/models"
 	sqlite "modernc.org/sqlite"
@@ -17,27 +14,6 @@ type Repository struct {
 	db *sql.DB
 }
 
-const articleSpotExtractionsDDLTemplate = `
-	%s article_spot_extractions (
-		spot_extraction_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		article_raw_id INTEGER NOT NULL REFERENCES articles_raw(article_raw_id) ON DELETE CASCADE,
-		transcription_id INTEGER NOT NULL REFERENCES article_audio_transcriptions(transcription_id) ON DELETE CASCADE,
-		presenter_name TEXT,
-		prompt_text TEXT NOT NULL,
-		raw_response_json TEXT NOT NULL CHECK(json_valid(raw_response_json)),
-		parsed_response_json TEXT NOT NULL CHECK(json_valid(parsed_response_json)),
-		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-	);
-
-	CREATE INDEX IF NOT EXISTS idx_article_spot_extractions_article_raw_id
-		ON article_spot_extractions(article_raw_id);
-`
-
-var backupSuffixRegexp = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
-
-func articleSpotExtractionsDDL(createTableClause string) string {
-	return fmt.Sprintf(articleSpotExtractionsDDLTemplate, createTableClause)
-}
 
 func init() {
 	sqlite.RegisterConnectionHook(func(conn sqlite.ExecQuerierContext, _ string) error {
@@ -59,95 +35,104 @@ func (r *Repository) Close() error {
 }
 
 func (r *Repository) InitSchema() error {
-	schema := fmt.Sprintf(`
-	CREATE TABLE IF NOT EXISTS articles_raw (
-		article_raw_id INTEGER PRIMARY KEY AUTOINCREMENT,
+	schema := `
+	CREATE TABLE IF NOT EXISTS article_sources (
+		article_source_id INTEGER PRIMARY KEY AUTOINCREMENT,
 		url TEXT NOT NULL UNIQUE,
+		discovered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS article_fetches (
+		article_fetch_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		article_source_id INTEGER NOT NULL UNIQUE
+			REFERENCES article_sources(article_source_id) ON DELETE CASCADE,
 		html TEXT NOT NULL,
-		video_id TEXT,
-		status TEXT NOT NULL DEFAULT 'PENDING',
-		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		fetched_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
 
-	CREATE TABLE IF NOT EXISTS authors (
-		author_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL UNIQUE
+	CREATE TABLE IF NOT EXISTS article_texts (
+		article_text_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		article_fetch_id INTEGER NOT NULL UNIQUE
+			REFERENCES article_fetches(article_fetch_id) ON DELETE CASCADE,
+		cleaned_text TEXT NOT NULL,
+		extracted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
 
-	CREATE TABLE IF NOT EXISTS spots (
-		spot_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL,
-		address TEXT NOT NULL,
-		latitude REAL NOT NULL,
-		longitude REAL NOT NULL,
-		UNIQUE(name, address)
-	);
-
-	CREATE TABLE IF NOT EXISTS articles (
-		article_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		article_raw_id INTEGER NOT NULL REFERENCES articles_raw(article_raw_id),
-		author_id INTEGER NOT NULL REFERENCES authors(author_id),
-		title TEXT NOT NULL
-	);
-
-	CREATE TABLE IF NOT EXISTS article_spots (
-		article_id INTEGER NOT NULL REFERENCES articles(article_id),
-		spot_id INTEGER NOT NULL REFERENCES spots(spot_id),
-		PRIMARY KEY (article_id, spot_id)
-	);
-
-	CREATE TABLE IF NOT EXISTS article_audio_sources (
+	CREATE TABLE IF NOT EXISTS audio_sources (
 		audio_source_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		article_raw_id INTEGER NOT NULL UNIQUE REFERENCES articles_raw(article_raw_id),
-		video_id TEXT NOT NULL,
+		article_fetch_id INTEGER NOT NULL UNIQUE
+			REFERENCES article_fetches(article_fetch_id) ON DELETE CASCADE,
 		youtube_url TEXT NOT NULL,
 		audio_format TEXT NOT NULL,
 		mime_type TEXT NOT NULL,
 		audio_blob BLOB NOT NULL,
 		byte_size INTEGER NOT NULL,
-		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		acquired_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
 
-	CREATE TABLE IF NOT EXISTS article_audio_transcriptions (
+	CREATE TABLE IF NOT EXISTS audio_transcriptions (
 		transcription_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		audio_source_id INTEGER NOT NULL REFERENCES article_audio_sources(audio_source_id),
+		audio_source_id INTEGER NOT NULL
+			REFERENCES audio_sources(audio_source_id) ON DELETE CASCADE,
 		provider TEXT NOT NULL,
 		language TEXT NOT NULL,
 		http_status INTEGER NOT NULL,
 		response_json TEXT NOT NULL CHECK(json_valid(response_json)),
 		response_byte_size INTEGER NOT NULL,
 		error_message TEXT,
-		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		transcribed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		UNIQUE(audio_source_id, provider, language)
 	);
 
-	CREATE TABLE IF NOT EXISTS article_text_extractions (
-		extraction_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		article_raw_id INTEGER NOT NULL UNIQUE REFERENCES articles_raw(article_raw_id) ON DELETE CASCADE,
-		extraction_mode TEXT NOT NULL,
-		status TEXT NOT NULL CHECK(status IN ('matched', 'no_match', 'error')),
-		matched_count INTEGER NOT NULL DEFAULT 0,
-		error_message TEXT,
-		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	CREATE TABLE IF NOT EXISTS spot_mentions (
+		spot_mention_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		transcription_id INTEGER NOT NULL
+			REFERENCES audio_transcriptions(transcription_id) ON DELETE CASCADE,
+		place TEXT NOT NULL,
+		sentence_start_timestamp REAL,
+		original_sentence_start_timestamp REAL,
+		refined_sentence_start_timestamp REAL,
+		extracted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(transcription_id, place)
 	);
 
-	CREATE TABLE IF NOT EXISTS article_text_contents (
-		text_content_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		extraction_id INTEGER NOT NULL REFERENCES article_text_extractions(extraction_id) ON DELETE CASCADE,
-		article_raw_id INTEGER NOT NULL REFERENCES articles_raw(article_raw_id) ON DELETE CASCADE,
-		source_type TEXT NOT NULL,
-		content TEXT NOT NULL,
-		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	CREATE TABLE IF NOT EXISTS spot_google_geocodes (
+		spot_google_geocode_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		spot_mention_id INTEGER NOT NULL UNIQUE
+			REFERENCES spot_mentions(spot_mention_id) ON DELETE CASCADE,
+		google_place_id TEXT,
+		latitude REAL NOT NULL,
+		longitude REAL NOT NULL,
+		formatted_address TEXT,
+		status TEXT NOT NULL,
+		geocoded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
 
-	CREATE INDEX IF NOT EXISTS idx_article_text_contents_article_raw_id
-		ON article_text_contents(article_raw_id);
+	CREATE TABLE IF NOT EXISTS presenters (
+		presenter_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		presenter_name TEXT NOT NULL UNIQUE,
+		materialized_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
 
-	%s
-	`, articleSpotExtractionsDDL("CREATE TABLE IF NOT EXISTS"))
+	CREATE TABLE IF NOT EXISTS article_presenters (
+		article_source_id INTEGER NOT NULL
+			REFERENCES article_sources(article_source_id) ON DELETE CASCADE,
+		presenter_id INTEGER NOT NULL
+			REFERENCES presenters(presenter_id) ON DELETE CASCADE,
+		linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (article_source_id, presenter_id)
+	);
+
+	CREATE TABLE IF NOT EXISTS article_spots (
+		article_source_id INTEGER NOT NULL
+			REFERENCES article_sources(article_source_id) ON DELETE CASCADE,
+		spot_google_geocode_id INTEGER NOT NULL
+			REFERENCES spot_google_geocodes(spot_google_geocode_id) ON DELETE CASCADE,
+		linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (article_source_id, spot_google_geocode_id)
+	);
+
+	`
 	if _, err := r.db.Exec(schema); err != nil {
 		return fmt.Errorf("initializing schema: %w", err)
 	}
@@ -155,376 +140,168 @@ func (r *Repository) InitSchema() error {
 	return nil
 }
 
-func (r *Repository) ResetSpotExtractionStorageWithBackup(backupSuffix string) (string, error) {
-	if backupSuffix == "" {
-		backupSuffix = time.Now().UTC().Format("20060102T150405Z")
-	}
-	if !backupSuffixRegexp.MatchString(backupSuffix) {
-		return "", fmt.Errorf("invalid backup suffix %q: must match %s", backupSuffix, backupSuffixRegexp.String())
-	}
-	backupTableName := fmt.Sprintf("article_spot_extractions_backup_%s", backupSuffix)
-
-	tx, err := r.db.Begin()
-	if err != nil {
-		return "", fmt.Errorf("starting extraction storage reset transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	if _, err := tx.Exec(`DROP TABLE IF EXISTS ` + backupTableName); err != nil {
-		return "", fmt.Errorf("dropping existing backup table %s: %w", backupTableName, err)
-	}
-
-	var existingTableName string
-	err = tx.QueryRow(`SELECT name FROM sqlite_master WHERE type='table' AND name='article_spot_extractions'`).Scan(&existingTableName)
-	switch {
-	case errors.Is(err, sql.ErrNoRows):
-		backupTableName = ""
-	case err != nil:
-		return "", fmt.Errorf("checking existing extraction table: %w", err)
-	default:
-		if _, err := tx.Exec(`ALTER TABLE article_spot_extractions RENAME TO ` + backupTableName); err != nil {
-			return "", fmt.Errorf("renaming extraction table to backup %s: %w", backupTableName, err)
-		}
-	}
-
-	if _, err := tx.Exec(articleSpotExtractionsDDL("CREATE TABLE")); err != nil {
-		return "", fmt.Errorf("creating reset extraction storage schema: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return "", fmt.Errorf("committing extraction storage reset transaction: %w", err)
-	}
-
-	return backupTableName, nil
-}
-
-func (r *Repository) InsertArticleRaw(url, html string, videoID *string) error {
-	_, err := r.db.Exec(
-		`INSERT INTO articles_raw (url, html, video_id)
-		 VALUES (?, ?, ?)
-		 ON CONFLICT(url) DO UPDATE SET
+func (r *Repository) UpsertArticleFetch(articleSourceID int64, html string) (int64, error) {
+	var articleFetchID int64
+	err := r.db.QueryRow(
+		`INSERT INTO article_fetches (article_source_id, html)
+		 VALUES (?, ?)
+		 ON CONFLICT(article_source_id) DO UPDATE SET
 			html = excluded.html,
-			video_id = excluded.video_id,
-			updated_at = CURRENT_TIMESTAMP`,
-		url, html, videoID,
-	)
+			fetched_at = CURRENT_TIMESTAMP
+		 RETURNING article_fetch_id`,
+		articleSourceID,
+		html,
+	).Scan(&articleFetchID)
 	if err != nil {
-		return fmt.Errorf("inserting article_raw url=%s: %w", url, err)
+		return 0, fmt.Errorf("upserting article_fetches article_source_id=%d: %w", articleSourceID, err)
 	}
-	return nil
+	return articleFetchID, nil
 }
 
-func (r *Repository) GetArticleRawByURL(url string) (*models.ArticleRaw, error) {
-	var a models.ArticleRaw
+func (r *Repository) UpsertArticleText(articleFetchID int64, cleanedText string) (int64, error) {
+	var articleTextID int64
 	err := r.db.QueryRow(
-		`SELECT article_raw_id, url, html, video_id, status, created_at, updated_at
-		 FROM articles_raw
-		 WHERE url = ?`,
-		url,
-	).Scan(&a.ArticleRawID, &a.URL, &a.HTML, &a.VideoID, &a.Status, &a.CreatedAt, &a.UpdatedAt)
+		`INSERT INTO article_texts (article_fetch_id, cleaned_text)
+		 VALUES (?, ?)
+		 ON CONFLICT(article_fetch_id) DO UPDATE SET
+			cleaned_text = excluded.cleaned_text,
+			extracted_at = CURRENT_TIMESTAMP
+		 RETURNING article_text_id`,
+		articleFetchID,
+		cleanedText,
+	).Scan(&articleTextID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("querying article_raw by url=%s: %w", url, err)
+		return 0, fmt.Errorf("upserting article_texts article_fetch_id=%d: %w", articleFetchID, err)
 	}
-	return &a, nil
+	return articleTextID, nil
 }
 
-func (r *Repository) GetArticleRawByID(articleRawID int64) (*models.ArticleRaw, error) {
-	var a models.ArticleRaw
+func (r *Repository) UpsertSpotMention(transcriptionID int64, place string, sentenceStart, originalSentenceStart, refinedSentenceStart *float64) (int64, error) {
+	var spotMentionID int64
 	err := r.db.QueryRow(
-		`SELECT article_raw_id, url, html, video_id, status, created_at, updated_at
-		 FROM articles_raw
-		 WHERE article_raw_id = ?`,
-		articleRawID,
-	).Scan(&a.ArticleRawID, &a.URL, &a.HTML, &a.VideoID, &a.Status, &a.CreatedAt, &a.UpdatedAt)
+		`INSERT INTO spot_mentions (
+			transcription_id,
+			place,
+			sentence_start_timestamp,
+			original_sentence_start_timestamp,
+			refined_sentence_start_timestamp
+		 ) VALUES (?, ?, ?, ?, ?)
+		 ON CONFLICT(transcription_id, place) DO UPDATE SET
+			sentence_start_timestamp = excluded.sentence_start_timestamp,
+			original_sentence_start_timestamp = excluded.original_sentence_start_timestamp,
+			refined_sentence_start_timestamp = excluded.refined_sentence_start_timestamp,
+			extracted_at = CURRENT_TIMESTAMP
+		 RETURNING spot_mention_id`,
+		transcriptionID,
+		place,
+		sentenceStart,
+		originalSentenceStart,
+		refinedSentenceStart,
+	).Scan(&spotMentionID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("querying article_raw by id=%d: %w", articleRawID, err)
+		return 0, fmt.Errorf("upserting spot_mentions transcription_id=%d place=%s: %w", transcriptionID, place, err)
 	}
-	return &a, nil
+	return spotMentionID, nil
 }
 
-func (r *Repository) ReplaceArticleTextExtraction(result models.ArticleTextExtractionResult) error {
-	contentsLen := len(result.Contents)
-	switch result.Status {
-	case models.ArticleTextExtractionStatusMatched:
-		if result.MatchedCount <= 0 || contentsLen <= 0 || result.MatchedCount != contentsLen {
-			return fmt.Errorf("invalid matched extraction payload article_raw_id=%d status=%s matched_count=%d contents=%d", result.ArticleRawID, result.Status, result.MatchedCount, contentsLen)
-		}
-	case models.ArticleTextExtractionStatusNoMatch, models.ArticleTextExtractionStatusError:
-		if result.MatchedCount != 0 || contentsLen != 0 {
-			return fmt.Errorf("invalid non-matched extraction payload article_raw_id=%d status=%s matched_count=%d contents=%d", result.ArticleRawID, result.Status, result.MatchedCount, contentsLen)
-		}
-	default:
-		return fmt.Errorf("invalid extraction status article_raw_id=%d status=%s matched_count=%d contents=%d", result.ArticleRawID, result.Status, result.MatchedCount, contentsLen)
-	}
-
-	tx, err := r.db.Begin()
-	if err != nil {
-		return fmt.Errorf("starting article text extraction transaction article_raw_id=%d: %w", result.ArticleRawID, err)
-	}
-	defer tx.Rollback()
-
-	if _, err := tx.Exec(`DELETE FROM article_text_contents WHERE article_raw_id = ?`, result.ArticleRawID); err != nil {
-		return fmt.Errorf("deleting article_text_contents article_raw_id=%d: %w", result.ArticleRawID, err)
-	}
-	if _, err := tx.Exec(`DELETE FROM article_text_extractions WHERE article_raw_id = ?`, result.ArticleRawID); err != nil {
-		return fmt.Errorf("deleting article_text_extractions article_raw_id=%d: %w", result.ArticleRawID, err)
-	}
-
-	var extractionID int64
-	err = tx.QueryRow(
-		`INSERT INTO article_text_extractions (article_raw_id, extraction_mode, status, matched_count, error_message)
-		 VALUES (?, ?, ?, ?, ?)
-		 RETURNING extraction_id`,
-		result.ArticleRawID,
-		result.ExtractionMode,
-		result.Status,
-		result.MatchedCount,
-		result.ErrorMessage,
-	).Scan(&extractionID)
-	if err != nil {
-		return fmt.Errorf("inserting article_text_extractions article_raw_id=%d: %w", result.ArticleRawID, err)
-	}
-
-	for _, content := range result.Contents {
-		_, err := tx.Exec(
-			`INSERT INTO article_text_contents (extraction_id, article_raw_id, source_type, content)
-			 VALUES (?, ?, ?, ?)`,
-			extractionID,
-			result.ArticleRawID,
-			content.SourceType,
-			content.Content,
-		)
-		if err != nil {
-			return fmt.Errorf("inserting article_text_contents article_raw_id=%d source_type=%s: %w", result.ArticleRawID, content.SourceType, err)
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("committing article text extraction transaction article_raw_id=%d: %w", result.ArticleRawID, err)
-	}
-
-	return nil
-}
-
-func (r *Repository) GetArticleTextExtraction(articleRawID int64) (*models.ArticleTextExtraction, error) {
-	var row models.ArticleTextExtraction
-	var errMsg sql.NullString
+func (r *Repository) UpsertPresenter(name string) (int64, error) {
+	var presenterID int64
 	err := r.db.QueryRow(
-		`SELECT extraction_id, article_raw_id, extraction_mode, status, matched_count, error_message, created_at, updated_at
-		 FROM article_text_extractions
-		 WHERE article_raw_id = ?`,
-		articleRawID,
-	).Scan(
-		&row.ExtractionID,
-		&row.ArticleRawID,
-		&row.ExtractionMode,
-		&row.Status,
-		&row.MatchedCount,
-		&errMsg,
-		&row.CreatedAt,
-		&row.UpdatedAt,
-	)
+		`INSERT INTO presenters (presenter_name)
+		 VALUES (?)
+		 ON CONFLICT(presenter_name) DO UPDATE SET
+			materialized_at = CURRENT_TIMESTAMP
+		 RETURNING presenter_id`,
+		name,
+	).Scan(&presenterID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("querying article_text_extractions article_raw_id=%d: %w", articleRawID, err)
+		return 0, fmt.Errorf("upserting presenters presenter_name=%s: %w", name, err)
 	}
-	if errMsg.Valid {
-		row.ErrorMessage = &errMsg.String
-	}
-	return &row, nil
+	return presenterID, nil
 }
 
-func (r *Repository) ListArticleTextContents(articleRawID int64) ([]models.ArticleTextContent, error) {
-	rows, err := r.db.Query(
-		`SELECT text_content_id, extraction_id, article_raw_id, source_type, content, created_at, updated_at
-		 FROM article_text_contents
-		 WHERE article_raw_id = ?
-		 ORDER BY text_content_id ASC`,
-		articleRawID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("querying article_text_contents article_raw_id=%d: %w", articleRawID, err)
-	}
-	defer rows.Close()
-
-	var results []models.ArticleTextContent
-	for rows.Next() {
-		var row models.ArticleTextContent
-		if err := rows.Scan(
-			&row.TextContentID,
-			&row.ExtractionID,
-			&row.ArticleRawID,
-			&row.SourceType,
-			&row.Content,
-			&row.CreatedAt,
-			&row.UpdatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("scanning article_text_contents row article_raw_id=%d: %w", articleRawID, err)
-		}
-		results = append(results, row)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating article_text_contents rows article_raw_id=%d: %w", articleRawID, err)
-	}
-	return results, nil
-}
-
-func (r *Repository) GetPendingArticles() ([]models.ArticleRaw, error) {
-	rows, err := r.db.Query(
-		`SELECT article_raw_id, url, html, video_id FROM articles_raw WHERE status = 'PENDING'`,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("querying pending articles: %w", err)
-	}
-	defer rows.Close()
-
-	var articles []models.ArticleRaw
-	for rows.Next() {
-		var a models.ArticleRaw
-		if err := rows.Scan(&a.ArticleRawID, &a.URL, &a.HTML, &a.VideoID); err != nil {
-			return nil, fmt.Errorf("scanning article_raw row: %w", err)
-		}
-		articles = append(articles, a)
-	}
-	return articles, rows.Err()
-}
-
-func (r *Repository) ListRecentArticles(limit int) ([]models.ArticleRaw, error) {
-	if limit <= 0 {
-		return []models.ArticleRaw{}, nil
-	}
-
-	rows, err := r.db.Query(
-		`SELECT article_raw_id, url, html, video_id, status, created_at, updated_at
-		 FROM articles_raw
-		 ORDER BY article_raw_id DESC
-		 LIMIT ?`,
-		limit,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("querying recent articles limit=%d: %w", limit, err)
-	}
-	defer rows.Close()
-
-	articles := make([]models.ArticleRaw, 0, limit)
-	for rows.Next() {
-		var a models.ArticleRaw
-		if err := rows.Scan(&a.ArticleRawID, &a.URL, &a.HTML, &a.VideoID, &a.Status, &a.CreatedAt, &a.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("scanning recent article row: %w", err)
-		}
-		articles = append(articles, a)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating recent article rows: %w", err)
-	}
-	return articles, nil
-}
-
-func (r *Repository) ArticleAudioSourceExists(articleRawID int64) (bool, error) {
-	var exists bool
-	err := r.db.QueryRow(
-		`SELECT EXISTS(SELECT 1 FROM article_audio_sources WHERE article_raw_id = ?)`,
-		articleRawID,
-	).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("checking audio source existence article_raw_id=%d: %w", articleRawID, err)
-	}
-	return exists, nil
-}
-
-func (r *Repository) InsertArticleAudioSource(src models.ArticleAudioSource) error {
+func (r *Repository) LinkArticlePresenter(articleSourceID, presenterID int64) error {
 	_, err := r.db.Exec(
-		`INSERT OR IGNORE INTO article_audio_sources
-			(article_raw_id, video_id, youtube_url, audio_format, mime_type, audio_blob, byte_size)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		src.ArticleRawID,
-		src.VideoID,
-		src.YouTubeURL,
-		src.AudioFormat,
-		src.MIMEType,
-		src.AudioBlob,
-		src.ByteSize,
+		`INSERT OR IGNORE INTO article_presenters (article_source_id, presenter_id)
+		 VALUES (?, ?)`,
+		articleSourceID,
+		presenterID,
 	)
 	if err != nil {
-		return fmt.Errorf("inserting article_audio_source article_raw_id=%d: %w", src.ArticleRawID, err)
+		return fmt.Errorf("linking article_presenters article_source_id=%d presenter_id=%d: %w", articleSourceID, presenterID, err)
 	}
 	return nil
 }
 
-func (r *Repository) GetArticleAudioSource(articleRawID int64) (*models.ArticleAudioSource, error) {
-	var src models.ArticleAudioSource
+func (r *Repository) UpsertSpotGoogleGeocode(spotMentionID int64, googlePlaceID *string, latitude, longitude float64, formattedAddress *string, status string) (int64, error) {
+	var spotGoogleGeocodeID int64
 	err := r.db.QueryRow(
-		`SELECT audio_source_id, article_raw_id, video_id, youtube_url, audio_format, mime_type, audio_blob, byte_size, created_at
-		 FROM article_audio_sources
-		 WHERE article_raw_id = ?`,
-		articleRawID,
-	).Scan(
-		&src.AudioSourceID,
-		&src.ArticleRawID,
-		&src.VideoID,
-		&src.YouTubeURL,
-		&src.AudioFormat,
-		&src.MIMEType,
-		&src.AudioBlob,
-		&src.ByteSize,
-		&src.CreatedAt,
-	)
+		`INSERT INTO spot_google_geocodes (
+			spot_mention_id,
+			google_place_id,
+			latitude,
+			longitude,
+			formatted_address,
+			status
+		 ) VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(spot_mention_id) DO UPDATE SET
+			google_place_id = excluded.google_place_id,
+			latitude = excluded.latitude,
+			longitude = excluded.longitude,
+			formatted_address = excluded.formatted_address,
+			status = excluded.status,
+			geocoded_at = CURRENT_TIMESTAMP
+		 RETURNING spot_google_geocode_id`,
+		spotMentionID,
+		googlePlaceID,
+		latitude,
+		longitude,
+		formattedAddress,
+		status,
+	).Scan(&spotGoogleGeocodeID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("querying article_audio_source article_raw_id=%d: %w", articleRawID, err)
+		return 0, fmt.Errorf("upserting spot_google_geocodes spot_mention_id=%d: %w", spotMentionID, err)
 	}
-	return &src, nil
+	return spotGoogleGeocodeID, nil
 }
 
-func (r *Repository) GetArticleAudioSourceByID(audioSourceID int64) (*models.ArticleAudioSource, error) {
-	var src models.ArticleAudioSource
+func (r *Repository) UpsertAudioSource(articleFetchID int64, youtubeURL, audioFormat, mimeType string, audioBlob []byte) (int64, error) {
+	var audioSourceID int64
 	err := r.db.QueryRow(
-		`SELECT audio_source_id, article_raw_id, video_id, youtube_url, audio_format, mime_type, audio_blob, byte_size, created_at
-		 FROM article_audio_sources
-		 WHERE audio_source_id = ?`,
-		audioSourceID,
-	).Scan(
-		&src.AudioSourceID,
-		&src.ArticleRawID,
-		&src.VideoID,
-		&src.YouTubeURL,
-		&src.AudioFormat,
-		&src.MIMEType,
-		&src.AudioBlob,
-		&src.ByteSize,
-		&src.CreatedAt,
-	)
+		`INSERT INTO audio_sources (article_fetch_id, youtube_url, audio_format, mime_type, audio_blob, byte_size)
+		 VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(article_fetch_id) DO UPDATE SET
+			youtube_url = excluded.youtube_url,
+			audio_format = excluded.audio_format,
+			mime_type = excluded.mime_type,
+			audio_blob = excluded.audio_blob,
+			byte_size = excluded.byte_size,
+			acquired_at = CURRENT_TIMESTAMP
+		 RETURNING audio_source_id`,
+		articleFetchID,
+		youtubeURL,
+		audioFormat,
+		mimeType,
+		audioBlob,
+		len(audioBlob),
+	).Scan(&audioSourceID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("querying article_audio_source audio_source_id=%d: %w", audioSourceID, err)
+		return 0, fmt.Errorf("upserting audio_sources article_fetch_id=%d: %w", articleFetchID, err)
 	}
-	return &src, nil
+	return audioSourceID, nil
 }
 
-func (r *Repository) GetLatestArticleAudioSource() (*models.ArticleAudioSource, error) {
+func (r *Repository) GetLatestAudioSource() (*models.ArticleAudioSource, error) {
 	var src models.ArticleAudioSource
 	err := r.db.QueryRow(
-		`SELECT audio_source_id, article_raw_id, video_id, youtube_url, audio_format, mime_type, audio_blob, byte_size, created_at
-		 FROM article_audio_sources
+		`SELECT audio_source_id, article_fetch_id, youtube_url, audio_format, mime_type, audio_blob, byte_size, acquired_at
+		 FROM audio_sources
 		 WHERE audio_blob IS NOT NULL AND length(audio_blob) > 0
 		 ORDER BY audio_source_id DESC
 		 LIMIT 1`,
 	).Scan(
 		&src.AudioSourceID,
 		&src.ArticleRawID,
-		&src.VideoID,
 		&src.YouTubeURL,
 		&src.AudioFormat,
 		&src.MIMEType,
@@ -536,15 +313,15 @@ func (r *Repository) GetLatestArticleAudioSource() (*models.ArticleAudioSource, 
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("querying latest article_audio_source: %w", err)
+		return nil, fmt.Errorf("querying latest audio_sources: %w", err)
 	}
 	return &src, nil
 }
 
-func (r *Repository) UpsertArticleAudioTranscription(t models.ArticleAudioTranscription) (int64, error) {
+func (r *Repository) UpsertAudioTranscription(t models.ArticleAudioTranscription) (int64, error) {
 	var transcriptionID int64
 	err := r.db.QueryRow(
-		`INSERT INTO article_audio_transcriptions
+		`INSERT INTO audio_transcriptions
 			(audio_source_id, provider, language, http_status, response_json, response_byte_size, error_message)
 		 VALUES (?, ?, ?, ?, json(?), ?, ?)
 		 ON CONFLICT(audio_source_id, provider, language) DO UPDATE SET
@@ -552,7 +329,7 @@ func (r *Repository) UpsertArticleAudioTranscription(t models.ArticleAudioTransc
 			response_json = excluded.response_json,
 			response_byte_size = excluded.response_byte_size,
 			error_message = excluded.error_message,
-			created_at = CURRENT_TIMESTAMP
+			transcribed_at = CURRENT_TIMESTAMP
 		 RETURNING transcription_id`,
 		t.AudioSourceID,
 		t.Provider,
@@ -563,115 +340,25 @@ func (r *Repository) UpsertArticleAudioTranscription(t models.ArticleAudioTransc
 		t.ErrorMessage,
 	).Scan(&transcriptionID)
 	if err != nil {
-		return 0, fmt.Errorf("upserting article_audio_transcription audio_source_id=%d provider=%s language=%s: %w", t.AudioSourceID, t.Provider, t.Language, err)
+		return 0, fmt.Errorf("upserting audio_transcriptions audio_source_id=%d provider=%s language=%s: %w", t.AudioSourceID, t.Provider, t.Language, err)
 	}
 	return transcriptionID, nil
 }
 
-func (r *Repository) GetArticleAudioTranscriptionByID(transcriptionID int64) (*models.ArticleAudioTranscription, error) {
-	return r.getArticleAudioTranscription(
-		`SELECT transcription_id, audio_source_id, provider, language, http_status, response_json, response_byte_size, error_message, created_at
-		 FROM article_audio_transcriptions
-		 WHERE transcription_id = ?`,
-		fmt.Sprintf("querying article_audio_transcription transcription_id=%d", transcriptionID),
-		transcriptionID,
-	)
-}
-
-func (r *Repository) GetLatestArticleAudioTranscription() (*models.ArticleAudioTranscription, error) {
-	return r.getArticleAudioTranscription(
-		`SELECT transcription_id, audio_source_id, provider, language, http_status, response_json, response_byte_size, error_message, created_at
-		 FROM article_audio_transcriptions
-		 ORDER BY transcription_id DESC
-		 LIMIT 1`,
-		"querying latest article_audio_transcription",
-	)
-}
-
-func (r *Repository) GetLatestArticleAudioTranscriptionByURL(url string) (*models.ArticleAudioTranscription, error) {
-	return r.getArticleAudioTranscription(
-		`SELECT t.transcription_id, t.audio_source_id, t.provider, t.language, t.http_status, t.response_json, t.response_byte_size, t.error_message, t.created_at
-		 FROM article_audio_transcriptions t
-		 JOIN article_audio_sources s ON s.audio_source_id = t.audio_source_id
-		 JOIN articles_raw ar ON ar.article_raw_id = s.article_raw_id
-		 WHERE ar.url = ?
-		 ORDER BY t.transcription_id DESC
-		 LIMIT 1`,
-		fmt.Sprintf("querying latest article_audio_transcription by url=%s", url),
-		url,
-	)
-}
-
-func (r *Repository) InsertSpotExtractionRecord(input models.SpotExtractionRecordInput) (int64, error) {
-	var extractionID int64
-	err := r.db.QueryRow(
-		`INSERT INTO article_spot_extractions (article_raw_id, transcription_id, presenter_name, prompt_text, raw_response_json, parsed_response_json)
-		 VALUES (?, ?, ?, ?, json(?), json(?))
-		 RETURNING spot_extraction_id`,
-		input.ArticleRawID,
-		input.TranscriptionID,
-		input.PresenterName,
-		input.PromptText,
-		input.RawResponseJSON,
-		input.ParsedResponseJSON,
-	).Scan(&extractionID)
-	if err != nil {
-		return 0, fmt.Errorf("inserting article_spot_extractions article_raw_id=%d transcription_id=%d: %w", input.ArticleRawID, input.TranscriptionID, err)
-	}
-	return extractionID, nil
-}
-
-func (r *Repository) GetLatestSpotExtractionRecord(articleRawID int64) (*models.SpotExtractionRecord, error) {
-	var row models.SpotExtractionRecord
-	var presenter sql.NullString
-	err := r.db.QueryRow(
-		`SELECT spot_extraction_id, article_raw_id, transcription_id, presenter_name, prompt_text, raw_response_json, parsed_response_json, created_at
-		 FROM article_spot_extractions
-		 WHERE article_raw_id = ?
-		 ORDER BY spot_extraction_id DESC
-		 LIMIT 1`,
-		articleRawID,
-	).Scan(
-		&row.SpotExtractionID,
-		&row.ArticleRawID,
-		&row.TranscriptionID,
-		&presenter,
-		&row.PromptText,
-		&row.RawResponseJSON,
-		&row.ParsedResponseJSON,
-		&row.CreatedAt,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("querying latest article_spot_extractions article_raw_id=%d: %w", articleRawID, err)
-	}
-	if presenter.Valid {
-		row.PresenterName = &presenter.String
-	}
-	return &row, nil
-}
-
-func (r *Repository) getArticleAudioTranscription(query string, errLabel string, args ...any) (*models.ArticleAudioTranscription, error) {
+func (r *Repository) GetLatestAudioTranscription() (*models.ArticleAudioTranscription, error) {
 	var t models.ArticleAudioTranscription
 	var errMsg sql.NullString
-	err := r.db.QueryRow(query, args...).Scan(
-		&t.TranscriptionID,
-		&t.AudioSourceID,
-		&t.Provider,
-		&t.Language,
-		&t.HTTPStatus,
-		&t.ResponseJSON,
-		&t.ResponseByteSize,
-		&errMsg,
-		&t.CreatedAt,
-	)
+	err := r.db.QueryRow(
+		`SELECT transcription_id, audio_source_id, provider, language, http_status, response_json, response_byte_size, error_message, transcribed_at
+		 FROM audio_transcriptions
+		 ORDER BY transcription_id DESC
+		 LIMIT 1`,
+	).Scan(&t.TranscriptionID, &t.AudioSourceID, &t.Provider, &t.Language, &t.HTTPStatus, &t.ResponseJSON, &t.ResponseByteSize, &errMsg, &t.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("%s: %w", errLabel, err)
+		return nil, fmt.Errorf("querying latest audio_transcriptions: %w", err)
 	}
 	if errMsg.Valid {
 		t.ErrorMessage = &errMsg.String
@@ -679,99 +366,224 @@ func (r *Repository) getArticleAudioTranscription(query string, errLabel string,
 	return &t, nil
 }
 
-func (r *Repository) InsertAuthor(name string) (int64, error) {
-	_, err := r.db.Exec(
-		`INSERT OR IGNORE INTO authors (name) VALUES (?)`,
-		name,
-	)
+func (r *Repository) GetArticleContextByTranscriptionID(transcriptionID int64) (string, int64, string, error) {
+	var articleURL string
+	var articleSourceID int64
+	var cleanedText string
+	err := r.db.QueryRow(
+		`SELECT s.url, s.article_source_id, t.cleaned_text
+		 FROM audio_transcriptions tr
+		 JOIN audio_sources au ON au.audio_source_id = tr.audio_source_id
+		 JOIN article_fetches f ON f.article_fetch_id = au.article_fetch_id
+		 JOIN article_sources s ON s.article_source_id = f.article_source_id
+		 JOIN article_texts t ON t.article_fetch_id = f.article_fetch_id
+		 WHERE tr.transcription_id = ?`,
+		transcriptionID,
+	).Scan(&articleURL, &articleSourceID, &cleanedText)
 	if err != nil {
-		return 0, fmt.Errorf("inserting author name=%s: %w", name, err)
+		return "", 0, "", fmt.Errorf("querying article context by transcription_id=%d: %w", transcriptionID, err)
 	}
-
-	var id int64
-	err = r.db.QueryRow(`SELECT author_id FROM authors WHERE name = ?`, name).Scan(&id)
-	if err != nil {
-		return 0, fmt.Errorf("querying author_id for name=%s: %w", name, err)
-	}
-	return id, nil
+	return articleURL, articleSourceID, cleanedText, nil
 }
 
-func (r *Repository) InsertSpot(name, address string, lat, lng float64) (int64, error) {
-	_, err := r.db.Exec(
-		`INSERT OR IGNORE INTO spots (name, address, latitude, longitude) VALUES (?, ?, ?, ?)`,
-		name, address, lat, lng,
-	)
-	if err != nil {
-		return 0, fmt.Errorf("inserting spot name=%s address=%s: %w", name, address, err)
-	}
-
-	var id int64
-	err = r.db.QueryRow(
-		`SELECT spot_id FROM spots WHERE name = ? AND address = ?`,
-		name, address,
-	).Scan(&id)
-	if err != nil {
-		return 0, fmt.Errorf("querying spot_id for name=%s address=%s: %w", name, address, err)
-	}
-	return id, nil
+type SpotMentionForGeocode struct {
+	SpotMentionID   int64
+	ArticleSourceID int64
+	Place           string
 }
 
-func (r *Repository) InsertArticle(articleRawID, authorID int64, title string) (int64, error) {
-	result, err := r.db.Exec(
-		`INSERT INTO articles (article_raw_id, author_id, title) VALUES (?, ?, ?)`,
-		articleRawID, authorID, title,
+func (r *Repository) ListSpotMentionsWithoutGeocode() ([]SpotMentionForGeocode, error) {
+	rows, err := r.db.Query(
+		`SELECT sm.spot_mention_id, f.article_source_id, sm.place
+		 FROM spot_mentions sm
+		 JOIN audio_transcriptions tr ON tr.transcription_id = sm.transcription_id
+		 JOIN audio_sources au ON au.audio_source_id = tr.audio_source_id
+		 JOIN article_fetches f ON f.article_fetch_id = au.article_fetch_id
+		 LEFT JOIN spot_google_geocodes sg ON sg.spot_mention_id = sm.spot_mention_id
+		 WHERE sg.spot_google_geocode_id IS NULL
+		 ORDER BY sm.spot_mention_id ASC`,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("inserting article raw_id=%d author_id=%d: %w", articleRawID, authorID, err)
+		return nil, fmt.Errorf("querying spot_mentions without geocode: %w", err)
 	}
-	return result.LastInsertId()
-}
-
-func (r *Repository) LinkArticleSpots(articleID int64, spotIDs []int64) error {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return fmt.Errorf("starting article_spots transaction article_id=%d: %w", articleID, err)
-	}
-	defer tx.Rollback()
-
-	for _, spotID := range spotIDs {
-		_, err := tx.Exec(
-			`INSERT OR IGNORE INTO article_spots (article_id, spot_id) VALUES (?, ?)`,
-			articleID, spotID,
-		)
-		if err != nil {
-			return fmt.Errorf("linking article_id=%d spot_id=%d: %w", articleID, spotID, err)
+	defer rows.Close()
+	out := []SpotMentionForGeocode{}
+	for rows.Next() {
+		var r SpotMentionForGeocode
+		if err := rows.Scan(&r.SpotMentionID, &r.ArticleSourceID, &r.Place); err != nil {
+			return nil, fmt.Errorf("scanning spot mention without geocode: %w", err)
 		}
+		out = append(out, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating spot mention without geocode: %w", err)
+	}
+	return out, nil
+}
+
+func (r *Repository) LinkArticleSpot(articleSourceID, spotGoogleGeocodeID int64) error {
+	_, err := r.db.Exec(
+		`INSERT OR IGNORE INTO article_spots (article_source_id, spot_google_geocode_id)
+		 VALUES (?, ?)`,
+		articleSourceID,
+		spotGoogleGeocodeID,
+	)
+	if err != nil {
+		return fmt.Errorf("linking article_spots article_source_id=%d spot_google_geocode_id=%d: %w", articleSourceID, spotGoogleGeocodeID, err)
+	}
+	return nil
+}
+
+func (r *Repository) UpsertSpotGoogleGeocodeAndLinkArticleSpot(spotMentionID int64, googlePlaceID *string, latitude, longitude float64, formattedAddress *string, status string, articleSourceID int64) (int64, error) {
+	tx, err := r.db.BeginTx(context.Background(), nil)
+	if err != nil {
+		return 0, fmt.Errorf("begin geocode/article_spot tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var spotGoogleGeocodeID int64
+	err = tx.QueryRow(
+		`INSERT INTO spot_google_geocodes (
+			spot_mention_id,
+			google_place_id,
+			latitude,
+			longitude,
+			formatted_address,
+			status
+		 ) VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(spot_mention_id) DO UPDATE SET
+			google_place_id = excluded.google_place_id,
+			latitude = excluded.latitude,
+			longitude = excluded.longitude,
+			formatted_address = excluded.formatted_address,
+			status = excluded.status,
+			geocoded_at = CURRENT_TIMESTAMP
+		 RETURNING spot_google_geocode_id`,
+		spotMentionID,
+		googlePlaceID,
+		latitude,
+		longitude,
+		formattedAddress,
+		status,
+	).Scan(&spotGoogleGeocodeID)
+	if err != nil {
+		return 0, fmt.Errorf("upserting spot_google_geocodes spot_mention_id=%d: %w", spotMentionID, err)
+	}
+
+	if _, err := tx.Exec(
+		`INSERT OR IGNORE INTO article_spots (article_source_id, spot_google_geocode_id)
+		 VALUES (?, ?)`,
+		articleSourceID,
+		spotGoogleGeocodeID,
+	); err != nil {
+		return 0, fmt.Errorf("linking article_spots article_source_id=%d spot_google_geocode_id=%d: %w", articleSourceID, spotGoogleGeocodeID, err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("committing article_spots transaction article_id=%d: %w", articleID, err)
+		return 0, fmt.Errorf("commit geocode/article_spot tx: %w", err)
 	}
-	return nil
+	return spotGoogleGeocodeID, nil
 }
 
-func (r *Repository) UpdateArticleRawStatus(articleRawID int64, url, status, reason string) error {
-	_, err := r.db.Exec(
-		`UPDATE articles_raw SET status = ?, updated_at = ? WHERE article_raw_id = ?`,
-		status, time.Now().UTC(), articleRawID,
+func (r *Repository) UpsertArticleSource(url string) (int64, error) {
+	var articleSourceID int64
+	err := r.db.QueryRow(
+		`INSERT INTO article_sources (url)
+		 VALUES (?)
+		 ON CONFLICT(url) DO UPDATE SET
+			discovered_at = article_sources.discovered_at
+		 RETURNING article_source_id`,
+		url,
+	).Scan(&articleSourceID)
+	if err != nil {
+		return 0, fmt.Errorf("upserting article_sources url=%s: %w", url, err)
+	}
+	return articleSourceID, nil
+}
+
+func (r *Repository) ListArticleSources() ([]models.ArticleSource, error) {
+	rows, err := r.db.Query(`SELECT article_source_id, url, discovered_at FROM article_sources ORDER BY article_source_id ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("querying article_sources: %w", err)
+	}
+	defer rows.Close()
+
+	var out []models.ArticleSource
+	for rows.Next() {
+		var row models.ArticleSource
+		if err := rows.Scan(&row.ArticleSourceID, &row.URL, &row.DiscoveredAt); err != nil {
+			return nil, fmt.Errorf("scanning article_sources row: %w", err)
+		}
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating article_sources rows: %w", err)
+	}
+	return out, nil
+}
+
+func (r *Repository) ListArticleSourcesWithoutFetch() ([]models.ArticleSource, error) {
+	rows, err := r.db.Query(
+		`SELECT s.article_source_id, s.url, s.discovered_at
+		 FROM article_sources s
+		 LEFT JOIN article_fetches f ON f.article_source_id = s.article_source_id
+		 WHERE f.article_fetch_id IS NULL
+		 ORDER BY s.article_source_id ASC`,
 	)
 	if err != nil {
-		return fmt.Errorf("updating article_raw status id=%d: %w", articleRawID, err)
+		return nil, fmt.Errorf("querying article_sources without fetch: %w", err)
 	}
-	if status == "FAILED" {
-		log.Printf("ERROR: article_raw_id=%d url=%s reason=%s", articleRawID, url, reason)
+	defer rows.Close()
+
+	var out []models.ArticleSource
+	for rows.Next() {
+		var row models.ArticleSource
+		if err := rows.Scan(&row.ArticleSourceID, &row.URL, &row.DiscoveredAt); err != nil {
+			return nil, fmt.Errorf("scanning article_sources without fetch row: %w", err)
+		}
+		out = append(out, row)
 	}
-	return nil
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating article_sources without fetch rows: %w", err)
+	}
+	return out, nil
+}
+
+func (r *Repository) ListArticleFetches() ([]models.ArticleFetch, error) {
+	rows, err := r.db.Query(`SELECT article_fetch_id, article_source_id, html, fetched_at FROM article_fetches ORDER BY article_fetch_id ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("querying article_fetches: %w", err)
+	}
+	defer rows.Close()
+
+	var out []models.ArticleFetch
+	for rows.Next() {
+		var row models.ArticleFetch
+		if err := rows.Scan(&row.ArticleFetchID, &row.ArticleSourceID, &row.HTML, &row.FetchedAt); err != nil {
+			return nil, fmt.Errorf("scanning article_fetches row: %w", err)
+		}
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating article_fetches rows: %w", err)
+	}
+	return out, nil
 }
 
 func (r *Repository) ExportData() (*models.ExportData, error) {
 	rows, err := r.db.Query(`
-		SELECT s.name, s.address, s.latitude, s.longitude, a.name
-		FROM spots s
-		JOIN article_spots aps ON aps.spot_id = s.spot_id
-		JOIN articles ar ON ar.article_id = aps.article_id
-		JOIN authors a ON a.author_id = ar.author_id
-		ORDER BY s.name, s.address, a.name
+		SELECT
+			COALESCE(sm.place, ''),
+			COALESCE(sgg.formatted_address, ''),
+			sgg.latitude,
+			sgg.longitude,
+			COALESCE(p.presenter_name, '')
+		FROM article_spots asp
+		JOIN spot_google_geocodes sgg ON sgg.spot_google_geocode_id = asp.spot_google_geocode_id
+		JOIN spot_mentions sm ON sm.spot_mention_id = sgg.spot_mention_id
+		LEFT JOIN article_presenters ap ON ap.article_source_id = asp.article_source_id
+		LEFT JOIN presenters p ON p.presenter_id = ap.presenter_id
+		ORDER BY sm.place, sgg.formatted_address, p.presenter_name
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("querying export data: %w", err)

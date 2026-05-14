@@ -38,6 +38,6 @@ Use `cmd/scrape` stage subcommands for orchestration. Stages are run explicitly 
 Adapter behavior notes:
 - SQLite adapter path remains the integrity anchor (FK/unique/transaction guarantees come from SQLite schema + repository behavior).
 - File adapter path is geared toward deterministic handoff and ad-hoc debugging (human-inspectable JSON artifacts), not DB-equivalent integrity semantics.
-- `geocode-spots --io sqlite` remains intentionally unsupported and fails with actionable guidance.
+- `geocode-spots` can now run in sqlite mode (persists geocodes + article spot links) or file mode (artifact-driven debugging/handoffs).
 
 If this summary ever disagrees with `openspec/specs/`, treat the specs as canonical.
