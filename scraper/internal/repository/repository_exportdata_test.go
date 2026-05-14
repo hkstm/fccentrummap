@@ -59,11 +59,17 @@ func TestExportDataIncludesRequiredFields(t *testing.T) {
 		t.Fatalf("expected 1 spot, got %d", len(data.Spots))
 	}
 	spot := data.Spots[0]
-	if spot.PlaceID == "" || spot.SpotName == "" || spot.PresenterName == "" || spot.YouTubeLink == "" {
+	if spot.PlaceID == "" || spot.SpotName == "" || spot.PresenterName == "" || spot.YouTubeLink == "" || spot.ArticleURL == "" {
 		t.Fatalf("expected required spot fields, got %+v", spot)
+	}
+	if spot.Latitude != 52.0 || spot.Longitude != 4.0 {
+		t.Fatalf("expected coordinates in export, got lat=%v lng=%v", spot.Latitude, spot.Longitude)
 	}
 	if spot.YouTubeLink != "https://youtu.be/abc?t=15" {
 		t.Fatalf("expected timestamped youtube link, got %s", spot.YouTubeLink)
+	}
+	if spot.ArticleURL != "https://example.com/a" {
+		t.Fatalf("expected article URL in export, got %s", spot.ArticleURL)
 	}
 	if len(data.Presenters) != 1 || data.Presenters[0].PresenterName != "Ray Fuego" {
 		t.Fatalf("unexpected presenters: %+v", data.Presenters)
