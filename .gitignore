@@ -22,3 +22,4 @@ viz/node_modules/
 viz/.next/
 viz/out/
 viz/tsconfig.tsbuildinfo
+viz/.env.local

@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   --fc-color-bg: #ffffff;
   --fc-color-surface: #ffffff;
@@ -32,6 +36,7 @@ html, body { margin: 0; padding: 0; font-family: var(--fc-font-sans); background
 
 .layout {
   display: grid;
+  grid-template-rows: auto auto 1fr;
   gap: 0;
   padding: 0;
   height: 100dvh;
@@ -40,8 +45,7 @@ html, body { margin: 0; padding: 0; font-family: var(--fc-font-sans); background
 .brandBanner {
   background: #000;
   border-bottom: 4px solid #fff;
-  min-height: 118px;
-  padding: 20px 16px;
+  padding: 10px 16px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -62,22 +66,33 @@ html, body { margin: 0; padding: 0; font-family: var(--fc-font-sans); background
 
 .layout > div[style] { border-radius: var(--fc-radius-lg); overflow: hidden; min-height: 70dvh; }
 
-.panel {
-  position: absolute;
-  top: 88px;
-  left: 16px;
-  z-index: 2;
-  width: min(320px, calc(100% - 32px));
-  background: var(--fc-color-surface);
-  border: 1px solid var(--fc-color-border);
-  border-radius: var(--fc-radius-lg);
-  box-shadow: var(--fc-shadow-md);
-  padding: var(--fc-space-4);
+.mapTitleBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  min-height: 66px;
+  background: #fff;
 }
 
-.panelHeader { display: flex; justify-content: space-between; gap: var(--fc-space-3); align-items: center; }
-.panelHeader h2 { margin: 0; font-size: var(--fc-text-lg); }
-.panelActions { display: flex; gap: var(--fc-space-2); }
+.mapTitleIcon {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+}
+
+.mapTitleText {
+  margin: 0;
+  font-size: 42px;
+  line-height: 46px;
+  font-weight: 700;
+}
+
+.mapTitleDivider {
+  flex: 1;
+  border-top: 3px solid #0c0d0e;
+}
+
 
 button {
   border: 1px solid var(--fc-color-border);
@@ -93,9 +108,6 @@ button:focus-visible, input:focus-visible {
   outline-offset: 2px;
 }
 
-.presenterList { list-style: none; margin: var(--fc-space-4) 0 0; padding: 0; max-height: 40dvh; overflow: auto; }
-.presenterList li + li { margin-top: var(--fc-space-2); }
-.presenterList label { display: flex; gap: var(--fc-space-2); align-items: center; min-height: 44px; }
 
 .markerButton {
   appearance: none;
@@ -119,32 +131,54 @@ button:focus-visible, input:focus-visible {
 }
 .markerButton svg { width: 44px; height: 44px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.2)); }
 
-.spotTooltip { min-width: 180px; }
+.spotTooltip {
+  min-width: 180px;
+  border: 1px solid #dedede;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Remove default Google InfoWindow outer chrome so only our tooltip card is visible */
+.gm-style .gm-style-iw-c {
+  padding: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+.gm-style .gm-style-iw-d {
+  overflow: visible !important;
+}
+
+.gm-style .gm-style-iw-t::after,
+.gm-style .gm-style-iw-tc,
+.gm-style .gm-style-iw-tc::after {
+  display: none !important;
+}
 .spotTooltipTopRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 .spotTooltipMeta { margin: 0; font-size: var(--fc-text-xs); color: var(--fc-color-text-muted); text-transform: uppercase; }
 .spotTooltipMetaLink { font-size: var(--fc-text-xs); color: var(--fc-color-text-muted); text-transform: uppercase; text-decoration: underline; }
 .spotTooltipMetaLink:hover { color: var(--fc-color-text); }
-.spotTooltipClose {
-  border: none;
-  background: transparent;
-  color: var(--fc-color-text-muted);
-  padding: 0;
-  width: 24px;
-  height: 24px;
-  line-height: 1;
-  font-size: 20px;
-}
-.spotTooltipClose:hover { background: transparent; color: var(--fc-color-text); }
-.spotTooltip h3 { margin: 0 0 10px; font-size: var(--fc-text-md); }
+.spotTooltipTitle { margin: 0 0 10px; font-size: var(--fc-text-md); font-family: "Garage Gothic", var(--fc-font-sans); text-transform: uppercase; }
 .spotTooltipAction {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
   background: var(--fc-color-accent);
   color: #fff;
   border-color: var(--fc-color-accent);
 }
+
+.spotTooltipActionIcon {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+  flex: 0 0 auto;
+}
 .spotTooltipAction:hover { background: var(--fc-color-accent-hover); }
-.spotTooltipAction + .spotTooltipAction { margin-top: 8px; }
 
 .errorState {
   margin: var(--fc-space-6);
@@ -155,6 +189,3 @@ button:focus-visible, input:focus-visible {
   color: #5f1d1d;
 }
 
-@media (min-width: 1024px) {
-  .panel { top: 104px; }
-}
