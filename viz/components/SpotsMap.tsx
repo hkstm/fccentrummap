@@ -7,6 +7,7 @@ import { loadSpotsData } from '@/lib/data';
 import { SpotWithPosition } from '@/lib/types';
 import { AmsterdamXMarker } from './AmsterdamXMarker';
 import { PresenterFilterPanel } from './PresenterFilterPanel';
+import { SpotTooltipCard } from './SpotTooltipCard';
 
 const AMS_BOUNDS: google.maps.LatLngBoundsLiteral = {
   south: 52.274525,
@@ -51,7 +52,7 @@ function SpotsLayer() {
         }));
 
         setPresenters(uniquePresenters);
-        setSelectedPresenters(new Set(uniquePresenters));
+        setSelectedPresenters(new Set(uniquePresenters.length > 0 ? [uniquePresenters[0]] : []));
         setSpots(resolved);
         setError(null);
       } catch (e) {
@@ -81,6 +82,7 @@ function SpotsLayer() {
       <PresenterFilterPanel
         presenters={presenters}
         selectedPresenters={selectedPresenters}
+        colors={colors}
         setPresenter={(name, checked) => {
           setSelectedPresenters((prev) => {
             const next = new Set(prev);
@@ -116,45 +118,7 @@ function SpotsLayer() {
           headerDisabled
           onCloseClick={() => setActiveSpotKey(null)}
         >
-          <div className="spotTooltip" role="dialog" aria-label={`Spot details: ${activeSpot.spotName}`}>
-            <div className="spotTooltipTopRow">
-              {activeSpot.articleUrl ? (
-                <a
-                  className="spotTooltipMetaLink"
-                  href={activeSpot.articleUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {activeSpot.presenterName}
-                </a>
-              ) : (
-                <p className="spotTooltipMeta">{activeSpot.presenterName}</p>
-              )}
-              <button
-                type="button"
-                className="spotTooltipClose"
-                aria-label="Close tooltip"
-                onClick={() => setActiveSpotKey(null)}
-              >
-                ×
-              </button>
-            </div>
-            <h3>{activeSpot.spotName}</h3>
-            <button
-              type="button"
-              className="spotTooltipAction"
-              onClick={() => window.open(activeSpot.youtubeLink, '_blank', 'noopener,noreferrer')}
-            >
-              ▶ Watch on YouTube
-            </button>
-            <button
-              type="button"
-              className="spotTooltipAction"
-              onClick={() => window.open(`https://www.google.com/maps/place/?q=place_id:${activeSpot.placeId}`, '_blank', 'noopener,noreferrer')}
-            >
-              📍 Open in Google Maps
-            </button>
-          </div>
+          <SpotTooltipCard spot={activeSpot} onClose={() => setActiveSpotKey(null)} />
         </InfoWindow>
       )}
     </>
@@ -163,12 +127,12 @@ function SpotsLayer() {
 
 export function SpotsMap() {
   const apiKey = process.env.NEXT_PUBLIC_DEMO_GOOGLE_MAPS_API_KEY;
-  const mapId = process.env.NEXT_PUBLIC_DEMO_MAP_ID;
+  const mapId = 'c14f6dcc70143a8c9d9b26b0';
 
-  if (!apiKey || !mapId) {
+  if (!apiKey) {
     return (
       <div className="errorState" role="alert">
-        Missing Google Maps config. Set NEXT_PUBLIC_DEMO_GOOGLE_MAPS_API_KEY and NEXT_PUBLIC_DEMO_MAP_ID.
+        Missing Google Maps config. Set NEXT_PUBLIC_DEMO_GOOGLE_MAPS_API_KEY.
       </div>
     );
   }
@@ -187,6 +151,13 @@ export function SpotsMap() {
             />
           </a>
         </header>
+        <section className="mapTitleBar" aria-label="Map section title">
+          <svg className="mapTitleIcon" xmlns="http://www.w3.org/2000/svg" width="17" height="24" viewBox="0 0 17 24" fill="none" aria-hidden="true">
+            <path d="M14.6691 6.65563V4.39429H12.3491V2.26804H9.9469V0H7.02838V2.26804H4.6279V4.39429H2.30791V6.65563H0V13.9683C0.0195488 17.0067 1.23618 19.4226 3.61423 21.1503C4.66869 21.9086 5.77519 22.5963 6.92603 23.2084L8.50144 24L10.0872 23.2017L10.097 23.1973C11.2408 22.5889 12.3404 21.9051 13.3881 21.1509C15.7673 19.4204 16.9828 16.9966 17 13.9398V6.65563H14.6691Z" fill="#ED1C24" />
+          </svg>
+          <h1 className="mapTitleText">Map</h1>
+          <div className="mapTitleDivider" aria-hidden="true" />
+        </section>
         <Map
           mapId={mapId}
           renderingType="VECTOR"
