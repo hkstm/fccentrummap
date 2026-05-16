@@ -21,18 +21,19 @@ export function PresenterFilterPanel({
   deselectAll,
 }: Props) {
   return (
-    <Card className="absolute left-4 top-[88px] z-[2] w-[min(340px,calc(100%-32px))]">
-      <CardHeader className="pb-3">
+    <div className="absolute left-4 top-4 bottom-4 z-[2] w-[min(340px,calc(100%-32px))] pointer-events-none flex flex-col justify-start">
+      <Card className="flex flex-col min-h-0 pointer-events-auto max-h-full">
+        <CardHeader className="pb-3 flex-none">
         <CardTitle className="text-lg font-bold uppercase [font-family:'Garage_Gothic',Inter,'Helvetica_Neue',helvetica,arial,sans-serif]">
           Presenters
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex gap-2">
+      <CardContent className="space-y-3 flex flex-col flex-1 min-h-0">
+        <div className="flex gap-2 flex-none">
           <Button variant="outline" size="sm" onClick={selectAll}>Select all</Button>
           <Button variant="outline" size="sm" onClick={deselectAll}>Deselect all</Button>
         </div>
-        <ScrollArea className="max-h-[40dvh] pr-2">
+        <ScrollArea className="flex flex-col flex-1 min-h-0 pr-3 -mr-1">
           <ul className="space-y-1">
             {presenters.map((name) => {
               const checked = selectedPresenters.has(name);
@@ -55,7 +56,8 @@ export function PresenterFilterPanel({
             })}
           </ul>
         </ScrollArea>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
