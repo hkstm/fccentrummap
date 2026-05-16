@@ -8,7 +8,6 @@
 !/data/.gitkeep
 
 # Frontend export artifacts
-/viz/public/data/spots.json
 
 # Build artifacts
 *.csv
