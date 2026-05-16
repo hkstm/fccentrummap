@@ -11,6 +11,7 @@ export function getInitialMapShareState<TSpot extends Pick<Spot, 'placeId' | 'pr
   search: string,
   presenters: string[],
   spots: TSpot[],
+  defaultSelectedPresenters: Set<string> = new Set(presenters),
 ) {
   const presenterSet = new Set(presenters);
   const params = new URLSearchParams(search);
@@ -18,7 +19,9 @@ export function getInitialMapShareState<TSpot extends Pick<Spot, 'placeId' | 'pr
   const selectedPresenters = new Set<string>();
 
   if (presenterParam === null) {
-    presenters.forEach((name) => selectedPresenters.add(name));
+    presenters
+      .filter((name) => defaultSelectedPresenters.has(name))
+      .forEach((name) => selectedPresenters.add(name));
   } else {
     presenterParam
       .split(',')
@@ -45,6 +48,7 @@ export function buildMapShareSearch(
   presenters: string[],
   selectedPresenters: Set<string>,
   activeSpotKey: string | null,
+  defaultSelectedPresenters: Set<string> = new Set(presenters),
 ) {
   const currentParams = new URLSearchParams(currentSearch);
   const nextParams = new URLSearchParams();
@@ -54,7 +58,8 @@ export function buildMapShareSearch(
   }
 
   const selectedInPresenterOrder = presenters.filter((name) => selectedPresenters.has(name));
-  if (selectedInPresenterOrder.length !== presenters.length) {
+  const defaultSelectedInPresenterOrder = presenters.filter((name) => defaultSelectedPresenters.has(name));
+  if (selectedInPresenterOrder.join('\0') !== defaultSelectedInPresenterOrder.join('\0')) {
     nextParams.append(PRESENTERS_QUERY_PARAM, selectedInPresenterOrder.join(','));
   }
 

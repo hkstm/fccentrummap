@@ -3,11 +3,15 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	htmlstd "html"
 	"net/url"
+	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/hkstm/fccentrummap/internal/models"
 	sqlite "modernc.org/sqlite"
@@ -41,6 +45,7 @@ func (r *Repository) InitSchema() error {
 	CREATE TABLE IF NOT EXISTS article_sources (
 		article_source_id INTEGER PRIMARY KEY AUTOINCREMENT,
 		url TEXT NOT NULL UNIQUE,
+		published_at TIMESTAMP,
 		discovered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
 
@@ -138,7 +143,98 @@ func (r *Repository) InitSchema() error {
 	if _, err := r.db.Exec(schema); err != nil {
 		return fmt.Errorf("initializing schema: %w", err)
 	}
+	if err := r.ensureArticleSourcePublishedAtColumn(); err != nil {
+		return err
+	}
+	if err := r.backfillArticleSourcePublishedAt(); err != nil {
+		return err
+	}
 
+	return nil
+}
+
+func (r *Repository) ensureArticleSourcePublishedAtColumn() error {
+	rows, err := r.db.Query(`PRAGMA table_info(article_sources)`)
+	if err != nil {
+		return fmt.Errorf("inspecting article_sources schema: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			cid       int
+			name      string
+			colType   string
+			notNull   int
+			defaultV  any
+			primaryKY int
+		)
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &defaultV, &primaryKY); err != nil {
+			return fmt.Errorf("scanning article_sources schema: %w", err)
+		}
+		if name == "published_at" {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterating article_sources schema: %w", err)
+	}
+	if _, err := r.db.Exec(`ALTER TABLE article_sources ADD COLUMN published_at TIMESTAMP`); err != nil {
+		return fmt.Errorf("adding article_sources.published_at: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) backfillArticleSourcePublishedAt() error {
+	rows, err := r.db.Query(`
+		SELECT s.article_source_id, s.url, f.html
+		FROM article_sources s
+		JOIN article_fetches f ON f.article_source_id = s.article_source_id
+		WHERE s.published_at IS NULL
+		ORDER BY s.article_source_id ASC`)
+	if err != nil {
+		return fmt.Errorf("querying article_sources published_at backfill candidates: %w", err)
+	}
+	defer rows.Close()
+
+	type candidate struct {
+		articleSourceID int64
+		url             string
+		html            string
+	}
+	var candidates []candidate
+	for rows.Next() {
+		var c candidate
+		if err := rows.Scan(&c.articleSourceID, &c.url, &c.html); err != nil {
+			return fmt.Errorf("scanning article_sources published_at backfill candidate: %w", err)
+		}
+		candidates = append(candidates, c)
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterating article_sources published_at backfill candidates: %w", err)
+	}
+
+	for _, c := range candidates {
+		publishedAt, err := parseArticlePublishedAt(c.html)
+		if err != nil {
+			return fmt.Errorf("backfilling article_sources.published_at article_source_id=%d url=%s: %w", c.articleSourceID, c.url, err)
+		}
+		if err := r.setArticleSourcePublishedAt(c.articleSourceID, publishedAt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Repository) setArticleSourcePublishedAt(articleSourceID int64, publishedAt time.Time) error {
+	_, err := r.db.Exec(
+		`UPDATE article_sources SET published_at = ? WHERE article_source_id = ?`,
+		formatPublishedAt(publishedAt),
+		articleSourceID,
+	)
+	if err != nil {
+		return fmt.Errorf("updating article_sources.published_at article_source_id=%d: %w", articleSourceID, err)
+	}
 	return nil
 }
 
@@ -157,7 +253,142 @@ func (r *Repository) UpsertArticleFetch(articleSourceID int64, html string) (int
 	if err != nil {
 		return 0, fmt.Errorf("upserting article_fetches article_source_id=%d: %w", articleSourceID, err)
 	}
+	if publishedAt, err := parseArticlePublishedAt(html); err == nil {
+		if err := r.setArticleSourcePublishedAt(articleSourceID, publishedAt); err != nil {
+			return 0, err
+		}
+	}
 	return articleFetchID, nil
+}
+
+var (
+	metaTagRe           = regexp.MustCompile(`(?is)<meta\b[^>]*>`)
+	attrRe              = regexp.MustCompile(`(?is)([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*("[^"]*"|'[^']*')`)
+	jsonLDScriptRe      = regexp.MustCompile(`(?is)<script\b[^>]*type\s*=\s*(?:"application/ld\+json"|'application/ld\+json')[^>]*>(.*?)</script>`)
+	datePublishedRe     = regexp.MustCompile(`(?is)"datePublished"\s*:\s*"([^"]+)"`)
+	sqliteTimestampForm = []string{
+		time.RFC3339Nano,
+		time.RFC3339,
+		"2006-01-02 15:04:05.999999999-07:00",
+		"2006-01-02 15:04:05-07:00",
+		"2006-01-02 15:04:05.999999999Z07:00",
+		"2006-01-02 15:04:05Z07:00",
+		"2006-01-02 15:04:05.999999999",
+		"2006-01-02 15:04:05",
+	}
+)
+
+func parseArticlePublishedAt(htmlBody string) (time.Time, error) {
+	if published, ok, err := parseArticlePublishedAtMeta(htmlBody); ok || err != nil {
+		return published, err
+	}
+	if published, ok, err := parseArticlePublishedAtJSONLD(htmlBody); ok || err != nil {
+		return published, err
+	}
+	return time.Time{}, errors.New("missing parseable article publish metadata")
+}
+
+func parseArticlePublishedAtMeta(htmlBody string) (time.Time, bool, error) {
+	for _, tag := range metaTagRe.FindAllString(htmlBody, -1) {
+		attrs := parseHTMLAttrs(tag)
+		property := strings.TrimSpace(attrs["property"])
+		name := strings.TrimSpace(attrs["name"])
+		if property != "article:published_time" && name != "article:published_time" {
+			continue
+		}
+		raw := strings.TrimSpace(attrs["content"])
+		if raw == "" {
+			return time.Time{}, true, errors.New("article:published_time metadata is missing content")
+		}
+		published, err := parsePublishedTimestamp(raw)
+		if err != nil {
+			return time.Time{}, true, fmt.Errorf("parsing article:published_time %q: %w", raw, err)
+		}
+		return published, true, nil
+	}
+	return time.Time{}, false, nil
+}
+
+func parseArticlePublishedAtJSONLD(htmlBody string) (time.Time, bool, error) {
+	for _, match := range jsonLDScriptRe.FindAllStringSubmatch(htmlBody, -1) {
+		if len(match) < 2 {
+			continue
+		}
+		body := htmlstd.UnescapeString(strings.TrimSpace(match[1]))
+		var doc any
+		if err := json.Unmarshal([]byte(body), &doc); err == nil {
+			if raw, ok := findDatePublished(doc); ok {
+				published, err := parsePublishedTimestamp(raw)
+				if err != nil {
+					return time.Time{}, true, fmt.Errorf("parsing datePublished %q: %w", raw, err)
+				}
+				return published, true, nil
+			}
+		}
+		if match := datePublishedRe.FindStringSubmatch(body); len(match) == 2 {
+			published, err := parsePublishedTimestamp(htmlstd.UnescapeString(match[1]))
+			if err != nil {
+				return time.Time{}, true, fmt.Errorf("parsing datePublished %q: %w", match[1], err)
+			}
+			return published, true, nil
+		}
+	}
+	return time.Time{}, false, nil
+}
+
+func findDatePublished(v any) (string, bool) {
+	switch t := v.(type) {
+	case map[string]any:
+		if raw, ok := t["datePublished"].(string); ok && strings.TrimSpace(raw) != "" {
+			return strings.TrimSpace(raw), true
+		}
+		for _, child := range t {
+			if raw, ok := findDatePublished(child); ok {
+				return raw, true
+			}
+		}
+	case []any:
+		for _, child := range t {
+			if raw, ok := findDatePublished(child); ok {
+				return raw, true
+			}
+		}
+	}
+	return "", false
+}
+
+func parseHTMLAttrs(tag string) map[string]string {
+	attrs := map[string]string{}
+	for _, match := range attrRe.FindAllStringSubmatch(tag, -1) {
+		if len(match) != 3 {
+			continue
+		}
+		key := strings.ToLower(match[1])
+		value := match[2]
+		if len(value) >= 2 {
+			value = value[1 : len(value)-1]
+		}
+		attrs[key] = htmlstd.UnescapeString(value)
+	}
+	return attrs
+}
+
+func parsePublishedTimestamp(raw string) (time.Time, error) {
+	raw = strings.TrimSpace(raw)
+	for _, layout := range sqliteTimestampForm {
+		if t, err := time.Parse(layout, raw); err == nil {
+			return t.UTC(), nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unsupported timestamp format")
+}
+
+func parseStoredPublishedAt(raw string) (time.Time, error) {
+	return parsePublishedTimestamp(raw)
+}
+
+func formatPublishedAt(t time.Time) string {
+	return t.UTC().Format(time.RFC3339Nano)
 }
 
 func (r *Repository) UpsertArticleText(articleFetchID int64, cleanedText string) (int64, error) {
@@ -383,8 +614,6 @@ func (r *Repository) UpsertAudioTranscription(t models.ArticleAudioTranscription
 	}
 	return transcriptionID, nil
 }
-
-
 
 func (r *Repository) GetLatestAudioTranscription() (*models.ArticleAudioTranscription, error) {
 	var t models.ArticleAudioTranscription
@@ -658,6 +887,7 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 			sgg.longitude,
 			COALESCE(aus.youtube_url, ''),
 			COALESCE(s.url, ''),
+			s.published_at,
 			sm.refined_sentence_start_timestamp,
 			sm.original_sentence_start_timestamp,
 			sm.sentence_start_timestamp
@@ -679,19 +909,27 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 		Spots:      []models.ExportSpot{},
 		Presenters: []models.ExportPresenter{},
 	}
-	presenterSet := make(map[string]struct{})
+	presenterLatestPublishedAt := make(map[string]time.Time)
 
 	for rows.Next() {
 		var (
-			spot            models.ExportSpot
-			rawYouTubeLink  string
-			refinedTS       sql.NullFloat64
-			originalTS      sql.NullFloat64
-			sentenceStartTS sql.NullFloat64
+			spot             models.ExportSpot
+			rawYouTubeLink   string
+			publishedAtValue sql.NullString
+			refinedTS        sql.NullFloat64
+			originalTS       sql.NullFloat64
+			sentenceStartTS  sql.NullFloat64
 		)
 		var presenterName sql.NullString
-		if err := rows.Scan(&spot.PlaceID, &spot.SpotName, &presenterName, &spot.Latitude, &spot.Longitude, &rawYouTubeLink, &spot.ArticleURL, &refinedTS, &originalTS, &sentenceStartTS); err != nil {
+		if err := rows.Scan(&spot.PlaceID, &spot.SpotName, &presenterName, &spot.Latitude, &spot.Longitude, &rawYouTubeLink, &spot.ArticleURL, &publishedAtValue, &refinedTS, &originalTS, &sentenceStartTS); err != nil {
 			return nil, fmt.Errorf("scanning export row: %w", err)
+		}
+		if !publishedAtValue.Valid || strings.TrimSpace(publishedAtValue.String) == "" {
+			return nil, fmt.Errorf("exportable article url=%s has no stored publication time", spot.ArticleURL)
+		}
+		publishedAt, err := parseStoredPublishedAt(publishedAtValue.String)
+		if err != nil {
+			return nil, fmt.Errorf("exportable article url=%s has unparseable stored publication time %q: %w", spot.ArticleURL, publishedAtValue.String, err)
 		}
 		if presenterName.Valid {
 			spot.PresenterName = presenterName.String
@@ -700,9 +938,9 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 		data.Spots = append(data.Spots, spot)
 
 		if presenterName.Valid {
-			if _, ok := presenterSet[presenterName.String]; !ok {
-				presenterSet[presenterName.String] = struct{}{}
-				data.Presenters = append(data.Presenters, models.ExportPresenter{PresenterName: presenterName.String})
+			current, ok := presenterLatestPublishedAt[presenterName.String]
+			if !ok || publishedAt.After(current) {
+				presenterLatestPublishedAt[presenterName.String] = publishedAt
 			}
 		}
 	}
@@ -738,7 +976,18 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 		}
 		return 0
 	})
+	for presenterName := range presenterLatestPublishedAt {
+		data.Presenters = append(data.Presenters, models.ExportPresenter{PresenterName: presenterName})
+	}
 	slices.SortFunc(data.Presenters, func(a, b models.ExportPresenter) int {
+		aPublished := presenterLatestPublishedAt[a.PresenterName]
+		bPublished := presenterLatestPublishedAt[b.PresenterName]
+		if aPublished.After(bPublished) {
+			return -1
+		}
+		if aPublished.Before(bPublished) {
+			return 1
+		}
 		if a.PresenterName < b.PresenterName {
 			return -1
 		}

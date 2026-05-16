@@ -17,6 +17,12 @@ const AMS_BOUNDS: google.maps.LatLngBoundsLiteral = {
   east: 5.073559,
 };
 
+const DEFAULT_SELECTED_PRESENTER_COUNT = 3;
+
+export function getDefaultSelectedPresenters(presenters: string[]) {
+  return new Set(presenters.slice(0, DEFAULT_SELECTED_PRESENTER_COUNT));
+}
+
 function BoundsFitter() {
   const map = useMap();
   useEffect(() => {
@@ -52,9 +58,10 @@ function SpotsLayer() {
           position: { lat: spot.latitude, lng: spot.longitude },
         }));
 
+        const defaultSelectedPresenters = getDefaultSelectedPresenters(uniquePresenters);
         const initialShareState = typeof window === 'undefined'
-          ? { selectedPresenters: new Set(uniquePresenters), activeSpotKey: null }
-          : getInitialMapShareState(window.location.search, uniquePresenters, resolved);
+          ? { selectedPresenters: defaultSelectedPresenters, activeSpotKey: null }
+          : getInitialMapShareState(window.location.search, uniquePresenters, resolved, defaultSelectedPresenters);
 
         setPresenters(uniquePresenters);
         setSelectedPresenters(initialShareState.selectedPresenters);
@@ -88,7 +95,13 @@ function SpotsLayer() {
   useEffect(() => {
     if (typeof window === 'undefined' || presenters.length === 0) return;
 
-    const nextSearch = buildMapShareSearch(window.location.search, presenters, selectedPresenters, activeSpotKey);
+    const nextSearch = buildMapShareSearch(
+      window.location.search,
+      presenters,
+      selectedPresenters,
+      activeSpotKey,
+      getDefaultSelectedPresenters(presenters),
+    );
     const currentSearch = window.location.search;
     if (nextSearch === currentSearch) return;
 

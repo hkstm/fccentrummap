@@ -25,7 +25,7 @@ func seedDBForExport(t *testing.T, dbPath string) {
 	if err != nil {
 		t.Fatalf("UpsertArticleSource: %v", err)
 	}
-	fetchID, err := repo.UpsertArticleFetch(sourceID, "<html>a</html>")
+	fetchID, err := repo.UpsertArticleFetch(sourceID, `<html><head><meta property="article:published_time" content="2025-01-03T10:00:00+01:00"></head><body>a</body></html>`)
 	if err != nil {
 		t.Fatalf("UpsertArticleFetch(sourceID=%d): %v", sourceID, err)
 	}

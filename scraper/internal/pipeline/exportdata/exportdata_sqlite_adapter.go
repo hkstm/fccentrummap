@@ -19,6 +19,9 @@ func (a *SQLiteAdapter) Run(_ context.Context, req Request) (Response, error) {
 		return Response{}, err
 	}
 	defer repo.Close()
+	if err := repo.InitSchema(); err != nil {
+		return Response{}, err
+	}
 
 	data, err := repo.ExportData()
 	if err != nil {
