@@ -28,27 +28,30 @@ function validateSpotsData(value: unknown): value is SpotsData {
 }
 
 export async function loadSpotsData(): Promise<SpotsData> {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+  const dataUrl = `${basePath}/data/spots.json`;
+
   let response: Response;
   try {
-    response = await fetch('/data/spots.json', { cache: 'no-store' });
+    response = await fetch(dataUrl, { cache: 'no-store' });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Network or fetch error loading /data/spots.json: ${message}`);
+    throw new Error(`Network or fetch error loading ${dataUrl}: ${message}`);
   }
 
   if (!response.ok) {
-    throw new Error(`HTTP error loading /data/spots.json: ${response.status} ${response.statusText}`);
+    throw new Error(`HTTP error loading ${dataUrl}: ${response.status} ${response.statusText}`);
   }
 
   let parsed: unknown;
   try {
     parsed = await response.json();
   } catch {
-    throw new Error('The /data/spots.json file is not valid JSON.');
+    throw new Error(`The ${dataUrl} file is not valid JSON.`);
   }
 
   if (!validateSpotsData(parsed)) {
-    throw new Error('The /data/spots.json file does not match the required spots/presenters schema.');
+    throw new Error(`The ${dataUrl} file does not match the required spots/presenters schema.`);
   }
 
   return parsed;
