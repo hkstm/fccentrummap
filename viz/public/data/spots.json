@@ -1,0 +1,1773 @@
+{
+  "spots": [
+    {
+      "placeId": "",
+      "spotName": "Maris Piper",
+      "presenterName": "Freek van Noortwijk",
+      "latitude": 52.3556545,
+      "longitude": 4.8884238,
+      "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=18",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-freek-van-noortwijk/"
+    },
+    {
+      "placeId": "",
+      "spotName": "Maris Piper",
+      "presenterName": "Freek van Noortwijk",
+      "latitude": 52.3556545,
+      "longitude": 4.8884238,
+      "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=18",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-chef-kok-freek-van-noortwijk/"
+    },
+    {
+      "placeId": "",
+      "spotName": "Slapende Smurf",
+      "presenterName": "Mascha Feoktistova",
+      "latitude": 52.3843533,
+      "longitude": 4.8822334,
+      "youtubeLink": "https://youtu.be/R_bjN8GHCeQ?t=120",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-beautygloss-mascha-feoktistova-in-amsterdam/"
+    },
+    {
+      "placeId": "ChIJ-1X_9M0JxkcR6m3KYBdx9Xw",
+      "spotName": "A Volo",
+      "presenterName": "Lisa Korver",
+      "latitude": 52.384283800000006,
+      "longitude": 4.8845977,
+      "youtubeLink": "https://youtu.be/XQdMiM_IfR8?t=89",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-lisa-korver/"
+    },
+    {
+      "placeId": "ChIJ-dCV6U4JxkcR9fLLAK3_RpE",
+      "spotName": "Reguliersdwarsstraat",
+      "presenterName": "Edsilia Rombley",
+      "latitude": 52.3662857,
+      "longitude": 4.8910769,
+      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=198",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
+    },
+    {
+      "placeId": "ChIJ-dU4O8IJxkcRI29YYUbfrXQ",
+      "spotName": "The Lebanese Sajeria",
+      "presenterName": "Marije Knevel",
+      "latitude": 52.368703599999996,
+      "longitude": 4.8873204,
+      "youtubeLink": "https://youtu.be/V-1Lm6EGx-Y?t=248",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-marije-knevel/"
+    },
+    {
+      "placeId": "ChIJ-eNLu-oJxkcRcA_6pWahshg",
+      "spotName": "Café De Duivel",
+      "presenterName": "Edson Da Graça",
+      "latitude": 52.366108700000005,
+      "longitude": 4.8935107,
+      "youtubeLink": "https://youtu.be/ScRok3BsHy0?t=16",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-edson-da-graca/"
+    },
+    {
+      "placeId": "ChIJ0-SogZkJxkcRWlM66jNTQ10",
+      "spotName": "Order Tattoos",
+      "presenterName": "Niels Oosthoek",
+      "latitude": 52.3739389,
+      "longitude": 4.8972687,
+      "youtubeLink": "https://youtu.be/H2gRuYKTZL4?t=336",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-niels-oosthoek/"
+    },
+    {
+      "placeId": "ChIJ07lKX8YJxkcRD1fHSz89E_k",
+      "spotName": "Patta",
+      "presenterName": "Edson Sabajo",
+      "latitude": 52.374683,
+      "longitude": 4.9004959999999995,
+      "youtubeLink": "https://youtu.be/XUF51SxY-hE?t=26",
+      "articleUrl": "https://fccentrum.nl/story/het-centrum-van-patta-co-founder-edson-sabajo/"
+    },
+    {
+      "placeId": "ChIJ081FkfIJxkcRM9OKc4YxmXM",
+      "spotName": "Duikelman",
+      "presenterName": "Freek van Noortwijk",
+      "latitude": 52.355446699999995,
+      "longitude": 4.889968800000001,
+      "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=72",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-chef-kok-freek-van-noortwijk/"
+    },
+    {
+      "placeId": "ChIJ081FkfIJxkcRM9OKc4YxmXM",
+      "spotName": "Duikelman",
+      "presenterName": "Freek van Noortwijk",
+      "latitude": 52.355446699999995,
+      "longitude": 4.889968800000001,
+      "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=72",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-freek-van-noortwijk/"
+    },
+    {
+      "placeId": "ChIJ0ySp1dDjxUcRMcXaeCyOv7M",
+      "spotName": "Ken Sushi",
+      "presenterName": "Dennis Huwae en Roger Bloem",
+      "latitude": 52.3755576,
+      "longitude": 4.9024595,
+      "youtubeLink": "https://youtu.be/h5Ni-cpTLBU?t=23",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-foodspots-van-sterrenchef-dennis-huwae-en-roger-bloem/"
+    },
+    {
+      "placeId": "ChIJ1QS09s0JxkcRb-SmrA58PRE",
+      "spotName": "De Movies",
+      "presenterName": "Kiki Boreel",
+      "latitude": 52.383957599999995,
+      "longitude": 4.8845865,
+      "youtubeLink": "https://youtu.be/zIb-yjLE1KI?t=9",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kiki-boreel/"
+    },
+    {
+      "placeId": "ChIJ1Ur3y8IJxkcRZO49dUyvXM4",
+      "spotName": "Foodware",
+      "presenterName": "Edson Sabajo",
+      "latitude": 52.3688496,
+      "longitude": 4.8819963,
+      "youtubeLink": "https://youtu.be/XUF51SxY-hE?t=488",
+      "articleUrl": "https://fccentrum.nl/story/het-centrum-van-patta-co-founder-edson-sabajo/"
+    },
+    {
+      "placeId": "ChIJ1Ur3y8IJxkcRZO49dUyvXM4",
+      "spotName": "Foodware",
+      "presenterName": "Ray Fuego",
+      "latitude": 52.3688496,
+      "longitude": 4.8819963,
+      "youtubeLink": "https://youtu.be/vY0rNjWQKX4?t=485",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-ray-fuego/"
+    },
+    {
+      "placeId": "ChIJ2bk7WQAJxkcRzfz7ScsVK4w",
+      "spotName": "Karthuizerhof",
+      "presenterName": "Tatjana Almuli",
+      "latitude": 52.378685,
+      "longitude": 4.8817277,
+      "youtubeLink": "https://youtu.be/mwONig2bDGE?t=355",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-tatjana-almuni/"
+    },
+    {
+      "placeId": "ChIJ2yr8fs8JxkcR2xvtZ9L9s70",
+      "spotName": "Café de Klepel",
+      "presenterName": "Samuel Levie",
+      "latitude": 52.377940599999995,
+      "longitude": 4.8868202,
+      "youtubeLink": "https://youtu.be/HB9_Rruot-4?t=267",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-samuel-levie/"
+    },
+    {
+      "placeId": "ChIJ2z9uuZAJxkcRTdWVTMl58-o",
+      "spotName": "Amstel Hotel",
+      "presenterName": "Merlijn en Vlinder Kamerling",
+      "latitude": 52.360099999999996,
+      "longitude": 4.9049,
+      "youtubeLink": "https://youtu.be/w5BiGW5pq8A?t=106",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-vlinder-merlijn-kamerling/"
+    },
+    {
+      "placeId": "ChIJ44ICejcJxkcRN7YxQMkuE88",
+      "spotName": "World of Nix",
+      "presenterName": "Pepijn Diepstraten",
+      "latitude": 52.3788868,
+      "longitude": 4.8848547,
+      "youtubeLink": "https://youtu.be/R5cmH_fd8dY?t=138",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-pepijn-wijn/"
+    },
+    {
+      "placeId": "ChIJ4TTNl3MJxkcRm46KdWWOsdw",
+      "spotName": "Smib (Sumibu)",
+      "presenterName": "Ray Fuego",
+      "latitude": 52.374809799999994,
+      "longitude": 4.900618199999999,
+      "youtubeLink": "https://youtu.be/vY0rNjWQKX4?t=226",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-ray-fuego/"
+    },
+    {
+      "placeId": "ChIJ5RJMhJw5ZUER2c4TUSO2Z_A",
+      "spotName": "Café Bern",
+      "presenterName": "Noni Kooiman",
+      "latitude": 52.372513,
+      "longitude": 4.90098,
+      "youtubeLink": "https://youtu.be/1H4YZsGOJcM?t=232",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-noni-kooiman/"
+    },
+    {
+      "placeId": "ChIJ5VnWCkAJxkcR6ZAqugeePjk",
+      "spotName": "Leeelijk",
+      "presenterName": "Kiki Bosman",
+      "latitude": 52.3780988,
+      "longitude": 4.8825319,
+      "youtubeLink": "https://youtu.be/6CdL1VPj3c8?t=310",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kiki-bosman/"
+    },
+    {
+      "placeId": "ChIJ6QtoIfQJxkcRzhxBtGIoY6I",
+      "spotName": "Bakkerij Wolf",
+      "presenterName": "Ginny Ramkisoen",
+      "latitude": 52.37037660000001,
+      "longitude": 4.8855546,
+      "youtubeLink": "https://youtu.be/11cKUGLCGsQ?t=265",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-ginny-ramkisoen-ginnyranu/"
+    },
+    {
+      "placeId": "ChIJ6anj6r4JxkcRxQixIaK9T2A",
+      "spotName": "Zuiderkerk",
+      "presenterName": "Bastiaan van Schaik",
+      "latitude": 52.3703054,
+      "longitude": 4.899804,
+      "youtubeLink": "https://youtu.be/UualXvQ8dac?t=241",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bastiaan-van-schaik/"
+    },
+    {
+      "placeId": "ChIJ6zLTfMEJxkcRDN7STlnb55w",
+      "spotName": "Juicebrothers",
+      "presenterName": "Ray Fuego",
+      "latitude": 52.3722144,
+      "longitude": 4.8873859,
+      "youtubeLink": "https://youtu.be/vY0rNjWQKX4?t=7",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-ray-fuego/"
+    },
+    {
+      "placeId": "ChIJ7Ri6K8QJxkcRW0_hwFeU8N8",
+      "spotName": "Caffè il Momento",
+      "presenterName": "Kor Hoebe",
+      "latitude": 52.374684599999995,
+      "longitude": 4.8890461,
+      "youtubeLink": "https://youtu.be/hRQjghrLk5s?t=18",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kor-hoebe/"
+    },
+    {
+      "placeId": "ChIJ7YgV_tsJxkcRHZ1Fg2gjaYM",
+      "spotName": "Nobu",
+      "presenterName": "Whitney Valerie",
+      "latitude": 52.3730526,
+      "longitude": 4.8758338,
+      "youtubeLink": "https://youtu.be/cdkEx8vtDPk?t=39",
+      "articleUrl": "https://fccentrum.nl/story/eten-eten-eten-met-whitney-valerie-nobu/"
+    },
+    {
+      "placeId": "ChIJ7bNah8MJxkcRd9okK_AtSWA",
+      "spotName": "The Gamekeeper",
+      "presenterName": "Anna Drijver",
+      "latitude": 52.372375899999994,
+      "longitude": 4.8860626,
+      "youtubeLink": "https://youtu.be/Lei4EEgG4K8?t=211",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-anna-drijver/"
+    },
+    {
+      "placeId": "ChIJ7zVAXOoJxkcRL1Aa5L9OFek",
+      "spotName": "Lawyer",
+      "presenterName": "Casper Reinders",
+      "latitude": 52.365069999999996,
+      "longitude": 4.891827,
+      "youtubeLink": "https://youtu.be/h_f4U1g0vng?t=186",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-casper-reinders/"
+    },
+    {
+      "placeId": "ChIJ88qyC84JxkcRBJ32CMRtCgQ",
+      "spotName": "Toki",
+      "presenterName": "Jonas Kooyman",
+      "latitude": 52.3829109,
+      "longitude": 4.885517500000001,
+      "youtubeLink": "https://youtu.be/5N3jPF5SA2s?t=48",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-jonas-kooyman-aka-havermelkelite/"
+    },
+    {
+      "placeId": "ChIJ8TePmr0JxkcRCgs0GWqZkUQ",
+      "spotName": "Joods Cultureel kwartier",
+      "presenterName": "Judith Zilversmith",
+      "latitude": 52.3671231,
+      "longitude": 4.903807,
+      "youtubeLink": "https://youtu.be/vEB9xYPNZlg?t=149",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-judith-zilversmit/"
+    },
+    {
+      "placeId": "ChIJ8bdk88AJxkcR_bzD8ISEt_A",
+      "spotName": "Tenclub",
+      "presenterName": "Bastiaan van Schaik",
+      "latitude": 52.3697765,
+      "longitude": 4.8932721,
+      "youtubeLink": "https://youtu.be/UualXvQ8dac?t=73",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bastiaan-van-schaik/"
+    },
+    {
+      "placeId": "ChIJA56omLkJxkcRENmP_twvjCY",
+      "spotName": "‘T Mandje",
+      "presenterName": "Geraldine Kemper",
+      "latitude": 52.3748109,
+      "longitude": 4.9009753,
+      "youtubeLink": "https://youtu.be/b8t0nhhf3tU?t=195",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-geraldine-kemper/"
+    },
+    {
+      "placeId": "ChIJA56omLkJxkcRENmP_twvjCY",
+      "spotName": "‘T Mandje",
+      "presenterName": "Geraldine Kemper",
+      "latitude": 52.3748109,
+      "longitude": 4.9009753,
+      "youtubeLink": "https://youtu.be/b8t0nhhf3tU?t=195",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-geraldine-kemper/"
+    },
+    {
+      "placeId": "ChIJAQBh_MUJxkcRGU0WlpEIcX4",
+      "spotName": "Herenstraat",
+      "presenterName": "Merlijn en Vlinder Kamerling",
+      "latitude": 52.37711050000001,
+      "longitude": 4.8889491,
+      "youtubeLink": "https://youtu.be/w5BiGW5pq8A?t=203",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-vlinder-merlijn-kamerling/"
+    },
+    {
+      "placeId": "ChIJAyv13g8JxkcRWE0e5zWEQz0",
+      "spotName": "haar eigen muziekstudio",
+      "presenterName": "Edsilia Rombley",
+      "latitude": 52.374146800000005,
+      "longitude": 4.9354906,
+      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=542",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
+    },
+    {
+      "placeId": "ChIJB7T9YJUJxkcR8dtTreJe6Zo",
+      "spotName": "Rembrandtplein",
+      "presenterName": "Judith Zilversmith",
+      "latitude": 52.36638800000001,
+      "longitude": 4.896389999999999,
+      "youtubeLink": "https://youtu.be/vEB9xYPNZlg?t=303",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-judith-zilversmit/"
+    },
+    {
+      "placeId": "ChIJBQW0kMEJxkcRzrgQK8EfCrg",
+      "spotName": "the American Book Center",
+      "presenterName": "Elisabeth Grijzenhout",
+      "latitude": 52.3689481,
+      "longitude": 4.8895467,
+      "youtubeLink": "https://youtu.be/VrwAMspX-Bs?t=203",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-elisabeth-grijzenhout/"
+    },
+    {
+      "placeId": "ChIJC83Lp7kJxkcR6e4dkMmc6fQ",
+      "spotName": "Mata Hari",
+      "presenterName": "Kor Hoebe",
+      "latitude": 52.3746613,
+      "longitude": 4.90013,
+      "youtubeLink": "https://youtu.be/hRQjghrLk5s?t=198",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kor-hoebe/"
+    },
+    {
+      "placeId": "ChIJCfDSoccJxkcR7nk2nSGTs78",
+      "spotName": "banketbakkerij Van der Linde",
+      "presenterName": "Nana Akwasi",
+      "latitude": 52.3748739,
+      "longitude": 4.8943126,
+      "youtubeLink": "https://youtu.be/W4aQRe0Y8sI?t=100",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-nana-asare-dit-is-een-og-foodspot/"
+    },
+    {
+      "placeId": "ChIJDQYOYeYJxkcRHzSbEw15xRg",
+      "spotName": "Han",
+      "presenterName": "Geraldine Kemper",
+      "latitude": 52.3631688,
+      "longitude": 4.8775723,
+      "youtubeLink": "https://youtu.be/b8t0nhhf3tU?t=258",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-geraldine-kemper/"
+    },
+    {
+      "placeId": "ChIJDQYOYeYJxkcRHzSbEw15xRg",
+      "spotName": "Han",
+      "presenterName": "Geraldine Kemper",
+      "latitude": 52.3631688,
+      "longitude": 4.8775723,
+      "youtubeLink": "https://youtu.be/b8t0nhhf3tU?t=258",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-geraldine-kemper/"
+    },
+    {
+      "placeId": "ChIJDY8OYsMJxkcRNqaKHHoTNFQ",
+      "spotName": "Pulitzer",
+      "presenterName": "Marije Knevel",
+      "latitude": 52.372878299999996,
+      "longitude": 4.883357,
+      "youtubeLink": "https://youtu.be/V-1Lm6EGx-Y?t=16",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-marije-knevel/"
+    },
+    {
+      "placeId": "ChIJDYnXDbgJxkcRolkk6zgmb4k",
+      "spotName": "Zero Zero",
+      "presenterName": "Eke Bosman",
+      "latitude": 52.3650841,
+      "longitude": 4.8902906,
+      "youtubeLink": "https://youtu.be/RCKb45c3jN4?t=643",
+      "articleUrl": "https://fccentrum.nl/story/het-centrum-van-eke-bosman-de-hotspots-van-amsterdam-volgens-snackspert/"
+    },
+    {
+      "placeId": "ChIJE0wour4JxkcRrFvQquelB-s",
+      "spotName": "BIS! Vintage",
+      "presenterName": "Béla Becht",
+      "latitude": 52.371030499999996,
+      "longitude": 4.900693599999999,
+      "youtubeLink": "https://youtu.be/SdxaMscP6Bw?t=341",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bela-becht/"
+    },
+    {
+      "placeId": "ChIJE0wour4JxkcRrFvQquelB-s",
+      "spotName": "BIS!",
+      "presenterName": "Jonas Kooyman",
+      "latitude": 52.371030499999996,
+      "longitude": 4.900693599999999,
+      "youtubeLink": "https://youtu.be/5N3jPF5SA2s?t=44",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-jonas-kooyman-aka-havermelkelite/"
+    },
+    {
+      "placeId": "ChIJEUB8YesJxkcRAwJjEwfIjo0",
+      "spotName": "Patisserie Holtkamp",
+      "presenterName": "Ray Fuego",
+      "latitude": 52.361659499999995,
+      "longitude": 4.8918849,
+      "youtubeLink": "https://youtu.be/vY0rNjWQKX4?t=138",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-ray-fuego/"
+    },
+    {
+      "placeId": "ChIJEUB8YesJxkcRAwJjEwfIjo0",
+      "spotName": "Kees Holtkamp",
+      "presenterName": "Sara Shawkat",
+      "latitude": 52.361659499999995,
+      "longitude": 4.8918849,
+      "youtubeLink": "https://youtu.be/C_jgXKjII8I?t=134",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-sara-shawkat/"
+    },
+    {
+      "placeId": "ChIJEXLqWbsJxkcRoTejbwhM05A",
+      "spotName": "Restaurant Gebr. Hartering",
+      "presenterName": "Béla Becht",
+      "latitude": 52.371671199999994,
+      "longitude": 4.9075709,
+      "youtubeLink": "https://youtu.be/SdxaMscP6Bw?t=181",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bela-becht/"
+    },
+    {
+      "placeId": "ChIJEb099sMJxkcRGeg2jPe_7vw",
+      "spotName": "Waxwell",
+      "presenterName": "Edson Sabajo",
+      "latitude": 52.372282000000006,
+      "longitude": 4.887788,
+      "youtubeLink": "https://youtu.be/XUF51SxY-hE?t=239",
+      "articleUrl": "https://fccentrum.nl/story/het-centrum-van-patta-co-founder-edson-sabajo/"
+    },
+    {
+      "placeId": "ChIJF5lKdbkJxkcR-IMxPwFDghE",
+      "spotName": "Dun Yong",
+      "presenterName": "Geraldine Kemper",
+      "latitude": 52.3743492,
+      "longitude": 4.9009523999999995,
+      "youtubeLink": "https://youtu.be/b8t0nhhf3tU?t=140",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-geraldine-kemper/"
+    },
+    {
+      "placeId": "ChIJF5lKdbkJxkcR-IMxPwFDghE",
+      "spotName": "Dun Yong",
+      "presenterName": "Geraldine Kemper",
+      "latitude": 52.3743492,
+      "longitude": 4.9009523999999995,
+      "youtubeLink": "https://youtu.be/b8t0nhhf3tU?t=140",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-geraldine-kemper/"
+    },
+    {
+      "placeId": "ChIJF5lKdbkJxkcR-IMxPwFDghE",
+      "spotName": "Toko Dun Yong",
+      "presenterName": "Sara Shawkat",
+      "latitude": 52.3743492,
+      "longitude": 4.9009523999999995,
+      "youtubeLink": "https://youtu.be/C_jgXKjII8I?t=360",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-sara-shawkat/"
+    },
+    {
+      "placeId": "ChIJFVZfq-kJxkcReHXGDXZJ40k",
+      "spotName": "Filmtheater De Uitkijk",
+      "presenterName": "Lisa Korver",
+      "latitude": 52.364748399999996,
+      "longitude": 4.884398399999999,
+      "youtubeLink": "https://youtu.be/XQdMiM_IfR8?t=307",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-lisa-korver/"
+    },
+    {
+      "placeId": "ChIJFWLRasgJxkcREK8iLiNuKgk",
+      "spotName": "Dille en Kamille",
+      "presenterName": "Merlijn en Vlinder Kamerling",
+      "latitude": 52.3785244,
+      "longitude": 4.8949226999999995,
+      "youtubeLink": "https://youtu.be/w5BiGW5pq8A?t=309",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-vlinder-merlijn-kamerling/"
+    },
+    {
+      "placeId": "ChIJG4bH8wUJxkcRaXVUQNtpGNE",
+      "spotName": "Leauf",
+      "presenterName": "Eke Bosman",
+      "latitude": 52.3804253,
+      "longitude": 4.8840946999999995,
+      "youtubeLink": "https://youtu.be/dvXSr12anJg?t=114",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-snackspert-eke-bosman/"
+    },
+    {
+      "placeId": "ChIJGUeCfeoJxkcRgfH6lSzVlls",
+      "spotName": "Taboe Bar",
+      "presenterName": "Matthijs Geuze",
+      "latitude": 52.366496700000006,
+      "longitude": 4.891005,
+      "youtubeLink": "https://youtu.be/ksUJm8LvP0M?t=229",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-matthijs-geuze/"
+    },
+    {
+      "placeId": "ChIJGV2Q3jQJxkcRme-irPoYO5A",
+      "spotName": "Concerto",
+      "presenterName": "Dio",
+      "latitude": 52.3633989,
+      "longitude": 4.8983571,
+      "youtubeLink": "https://youtu.be/-9XrLWU4JgE?t=113",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-dio/"
+    },
+    {
+      "placeId": "ChIJH4WfML8JxkcRhDH-dTXyRBs",
+      "spotName": "Kok Antiquraat",
+      "presenterName": "Anna Drijver",
+      "latitude": 52.371266,
+      "longitude": 4.8974839999999995,
+      "youtubeLink": "https://youtu.be/Lei4EEgG4K8?t=90",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-anna-drijver/"
+    },
+    {
+      "placeId": "ChIJH4Y5H9wJxkcRUaV5PvVZhRQ",
+      "spotName": "Kef",
+      "presenterName": "Freek van Noortwijk",
+      "latitude": 52.371601399999996,
+      "longitude": 4.8758438,
+      "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=305",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-chef-kok-freek-van-noortwijk/"
+    },
+    {
+      "placeId": "ChIJH4Y5H9wJxkcRUaV5PvVZhRQ",
+      "spotName": "Kef",
+      "presenterName": "Freek van Noortwijk",
+      "latitude": 52.371601399999996,
+      "longitude": 4.8758438,
+      "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=305",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-freek-van-noortwijk/"
+    },
+    {
+      "placeId": "ChIJHQFlUU-kx0cRSGq1bXHtPeU",
+      "spotName": "The New Originals",
+      "presenterName": "Nana Akwasi",
+      "latitude": 52.3749305,
+      "longitude": 4.900999,
+      "youtubeLink": "https://youtu.be/W4aQRe0Y8sI?t=296",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-nana-asare-dit-is-een-og-foodspot/"
+    },
+    {
+      "placeId": "ChIJHc5kzSkJxkcRGvQTbRmXmR0",
+      "spotName": "Buurtpark ’s-Gravenhekje",
+      "presenterName": "Béla Becht",
+      "latitude": 52.3719938,
+      "longitude": 4.9070453,
+      "youtubeLink": "https://youtu.be/SdxaMscP6Bw?t=20",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bela-becht/"
+    },
+    {
+      "placeId": "ChIJI0VM_M8JxkcRhtGIFC__fmU",
+      "spotName": "Café Nol",
+      "presenterName": "Kiki Bosman",
+      "latitude": 52.37829,
+      "longitude": 4.883390299999999,
+      "youtubeLink": "https://youtu.be/6CdL1VPj3c8?t=279",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kiki-bosman/"
+    },
+    {
+      "placeId": "ChIJI4NjEmoJxkcR2U8-dU0quxU",
+      "spotName": "Tableware",
+      "presenterName": "Joey Jaq",
+      "latitude": 52.377793,
+      "longitude": 4.883713,
+      "youtubeLink": "https://youtu.be/id6yPRQ51Bw?t=110",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-joey-jaq/"
+    },
+    {
+      "placeId": "ChIJISRM4s4JxkcR7cdxqCceLrc",
+      "spotName": "Café ‘t Papeneiland",
+      "presenterName": "Kiki Bosman",
+      "latitude": 52.380462699999995,
+      "longitude": 4.8879703999999995,
+      "youtubeLink": "https://youtu.be/6CdL1VPj3c8?t=103",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kiki-bosman/"
+    },
+    {
+      "placeId": "ChIJIVNSVnEJxkcRedvjvHOcry0",
+      "spotName": "Satay Club",
+      "presenterName": "Eke Bosman",
+      "latitude": 52.3797323,
+      "longitude": 4.8931837,
+      "youtubeLink": "https://youtu.be/dvXSr12anJg?t=403",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-snackspert-eke-bosman/"
+    },
+    {
+      "placeId": "ChIJI_bQu90JxkcRhzwgGSFAy8I",
+      "spotName": "Mr. Blou I Love You",
+      "presenterName": "Lot",
+      "latitude": 52.369066499999995,
+      "longitude": 4.8775531999999995,
+      "youtubeLink": "https://youtu.be/dnwS8VjPO-8?t=146",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-lot-aka-de-haarclip-van-marie-claire/"
+    },
+    {
+      "placeId": "ChIJIcJrtsYJxkcRIRWS5J0TKHE",
+      "spotName": "Albert Heijn",
+      "presenterName": "Béla Becht",
+      "latitude": 52.3728467,
+      "longitude": 4.890225099999999,
+      "youtubeLink": "https://youtu.be/SdxaMscP6Bw?t=425",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bela-becht/"
+    },
+    {
+      "placeId": "ChIJJag8tmEJxkcRNsmv2QADgNo",
+      "spotName": "Fosbury and Sons",
+      "presenterName": "Ginny Ramkisoen",
+      "latitude": 52.3637788,
+      "longitude": 4.886993599999999,
+      "youtubeLink": "https://youtu.be/11cKUGLCGsQ?t=10",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-ginny-ramkisoen-ginnyranu/"
+    },
+    {
+      "placeId": "ChIJK2C6P5YJxkcRJCd9Xv_b3K8",
+      "spotName": "Amsterdam Sweet Art",
+      "presenterName": "Marwa Omari",
+      "latitude": 52.363104799999995,
+      "longitude": 4.8883145,
+      "youtubeLink": "https://youtu.be/GT9tfl_qYZE?t=100",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-marwa-omari/"
+    },
+    {
+      "placeId": "ChIJK6joGN0JxkcRzgSU2wDrxe8",
+      "spotName": "Smit Cruyff",
+      "presenterName": "Dio",
+      "latitude": 52.3695563,
+      "longitude": 4.8798674,
+      "youtubeLink": "https://youtu.be/-9XrLWU4JgE?t=222",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-dio/"
+    },
+    {
+      "placeId": "ChIJKSEjycMJxkcRHhlcbqsS5Ao",
+      "spotName": "Buffet van Odette",
+      "presenterName": "Merlijn en Vlinder Kamerling",
+      "latitude": 52.3623386,
+      "longitude": 4.8890787,
+      "youtubeLink": "https://youtu.be/w5BiGW5pq8A?t=13",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-vlinder-merlijn-kamerling/"
+    },
+    {
+      "placeId": "ChIJKZbA-lcJxkcRL8eEyNeTBAc",
+      "spotName": "Kapsalon in de Jordaan",
+      "presenterName": "Bente",
+      "latitude": 52.3694081,
+      "longitude": 4.8806689,
+      "youtubeLink": "https://youtu.be/Ect-j6gXOQY?t=13",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bente/"
+    },
+    {
+      "placeId": "ChIJL33h87gJxkcRIu1FY7IyWV4",
+      "spotName": "Oude Kerk",
+      "presenterName": "Jonas Kooyman",
+      "latitude": 52.374417699999995,
+      "longitude": 4.898176299999999,
+      "youtubeLink": "https://youtu.be/5N3jPF5SA2s?t=350",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-jonas-kooyman-aka-havermelkelite/"
+    },
+    {
+      "placeId": "ChIJLS4dI9WhxkcRzj2fi43z2n0",
+      "spotName": "Breda",
+      "presenterName": "Freek van Noortwijk",
+      "latitude": 52.3823386,
+      "longitude": 4.8876465,
+      "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=633",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-freek-van-noortwijk/"
+    },
+    {
+      "placeId": "ChIJMa8Xmb8JxkcRwOSRvNThUGs",
+      "spotName": "boekhandel Perdu",
+      "presenterName": "Tatjana Almuli",
+      "latitude": 52.368975999999996,
+      "longitude": 4.8962862,
+      "youtubeLink": "https://youtu.be/mwONig2bDGE?t=248",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-tatjana-almuni/"
+    },
+    {
+      "placeId": "ChIJN7y6C78JxkcRIKsx9uAn4g4",
+      "spotName": "Saint-Jean",
+      "presenterName": "Jonas Kooyman",
+      "latitude": 52.3803056,
+      "longitude": 4.884282400000001,
+      "youtubeLink": "https://youtu.be/5N3jPF5SA2s?t=168",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-jonas-kooyman-aka-havermelkelite/"
+    },
+    {
+      "placeId": "ChIJNQGt-c4JxkcRqmwL9rEToYI",
+      "spotName": "Café Thijssen",
+      "presenterName": "Kiki Bosman",
+      "latitude": 52.380810399999994,
+      "longitude": 4.8873031,
+      "youtubeLink": "https://youtu.be/6CdL1VPj3c8?t=22",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kiki-bosman/"
+    },
+    {
+      "placeId": "ChIJO3DVK90JxkcRNtdcx6MtIx4",
+      "spotName": "Zuivelhoeve",
+      "presenterName": "Ray Fuego",
+      "latitude": 52.3696262,
+      "longitude": 4.881469399999999,
+      "youtubeLink": "https://youtu.be/vY0rNjWQKX4?t=394",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-ray-fuego/"
+    },
+    {
+      "placeId": "ChIJObgObjgJxkcRB_acYUIDJKM",
+      "spotName": "Karasu",
+      "presenterName": "Samuel Levie",
+      "latitude": 52.361800699999996,
+      "longitude": 4.8890061,
+      "youtubeLink": "https://youtu.be/HB9_Rruot-4?t=17",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-samuel-levie/"
+    },
+    {
+      "placeId": "ChIJOxJ6fcIJxkcRa3kbCQlhPs8",
+      "spotName": "Huis Marseille",
+      "presenterName": "Tatjana Almuli",
+      "latitude": 52.367693499999994,
+      "longitude": 4.8849279,
+      "youtubeLink": "https://youtu.be/mwONig2bDGE?t=9",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-tatjana-almuni/"
+    },
+    {
+      "placeId": "ChIJP6QAimAJxkcRIQlwaA4axGU",
+      "spotName": "Laurens",
+      "presenterName": "Matthijs Geuze",
+      "latitude": 52.374744799999995,
+      "longitude": 4.8882829999999995,
+      "youtubeLink": "https://youtu.be/ksUJm8LvP0M?t=24",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-matthijs-geuze/"
+    },
+    {
+      "placeId": "ChIJPQXTzsUJxkcR169Sk9ThUCA",
+      "spotName": "bankje aan de Herengracht",
+      "presenterName": "Matthijs Geuze",
+      "latitude": 52.3755027,
+      "longitude": 4.888214400000001,
+      "youtubeLink": "https://youtu.be/ksUJm8LvP0M?t=167",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-matthijs-geuze/"
+    },
+    {
+      "placeId": "ChIJPTeTv94JxkcRrgXqZbXJr4Y",
+      "spotName": "Sterk",
+      "presenterName": "Freek van Noortwijk",
+      "latitude": 52.3715747,
+      "longitude": 4.873683499999999,
+      "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=408",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-freek-van-noortwijk/"
+    },
+    {
+      "placeId": "ChIJPTeTv94JxkcRrgXqZbXJr4Y",
+      "spotName": "Sterk",
+      "presenterName": "Freek van Noortwijk",
+      "latitude": 52.3715747,
+      "longitude": 4.873683499999999,
+      "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=408",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-chef-kok-freek-van-noortwijk/"
+    },
+    {
+      "placeId": "ChIJPb7AIWEJxkcRMWVhAZsPYF8",
+      "spotName": "Hutt",
+      "presenterName": "Kor Hoebe",
+      "latitude": 52.388529899999995,
+      "longitude": 4.9230545999999995,
+      "youtubeLink": "https://youtu.be/hRQjghrLk5s?t=353",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kor-hoebe/"
+    },
+    {
+      "placeId": "ChIJPdJhTb8JxkcR65Z6_YwAakk",
+      "spotName": "Oriental City",
+      "presenterName": "Luna Hetsen",
+      "latitude": 52.3718485,
+      "longitude": 4.8962404,
+      "youtubeLink": "https://youtu.be/mFKEdJdEv_U?t=81",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-luna-schoudertassie/"
+    },
+    {
+      "placeId": "ChIJPx5wj8EJxkcRhYWupdwEc1E",
+      "spotName": "Athenaeum boekhandel",
+      "presenterName": "Ginny Ramkisoen",
+      "latitude": 52.368917599999996,
+      "longitude": 4.8890655999999995,
+      "youtubeLink": "https://youtu.be/11cKUGLCGsQ?t=96",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-ginny-ramkisoen-ginnyranu/"
+    },
+    {
+      "placeId": "ChIJQ4hm2_wJxkcRXxPMkR4sS6Q",
+      "spotName": "Lof",
+      "presenterName": "Pepijn Diepstraten",
+      "latitude": 52.382846699999995,
+      "longitude": 4.8866651999999995,
+      "youtubeLink": "https://youtu.be/R5cmH_fd8dY?t=19",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-pepijn-wijn/"
+    },
+    {
+      "placeId": "ChIJQ6jKh-oJxkcR1RvMrUX11bs",
+      "spotName": "Club NYX",
+      "presenterName": "Matthijs Geuze",
+      "latitude": 52.366266499999995,
+      "longitude": 4.891385,
+      "youtubeLink": "https://youtu.be/ksUJm8LvP0M?t=246",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-matthijs-geuze/"
+    },
+    {
+      "placeId": "ChIJQZi1ycAJxkcRUoa3K7Apt_w",
+      "spotName": "L’ Atelier du Champagne",
+      "presenterName": "Pepijn Diepstraten",
+      "latitude": 52.3701565,
+      "longitude": 4.892977,
+      "youtubeLink": "https://youtu.be/R5cmH_fd8dY?t=310",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-pepijn-wijn/"
+    },
+    {
+      "placeId": "ChIJQauuBdAJxkcRjtOgvfsDU1w",
+      "spotName": "Hermanusje van alles",
+      "presenterName": "Mascha Feoktistova",
+      "latitude": 52.378419199999996,
+      "longitude": 4.8825904,
+      "youtubeLink": "https://youtu.be/R_bjN8GHCeQ?t=299",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-beautygloss-mascha-feoktistova-in-amsterdam/"
+    },
+    {
+      "placeId": "ChIJRXjQFrkJxkcRixW5CpNXcmI",
+      "spotName": "Hoi Tin",
+      "presenterName": "Noni Kooiman",
+      "latitude": 52.373427,
+      "longitude": 4.9001332,
+      "youtubeLink": "https://youtu.be/1H4YZsGOJcM?t=179",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-noni-kooiman/"
+    },
+    {
+      "placeId": "ChIJS9DrlHUJxkcRqi2v2XePT2o",
+      "spotName": "NU Delicatessen",
+      "presenterName": "Eke Bosman",
+      "latitude": 52.37659310000001,
+      "longitude": 4.8822931,
+      "youtubeLink": "https://youtu.be/dvXSr12anJg?t=228",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-snackspert-eke-bosman/"
+    },
+    {
+      "placeId": "ChIJSUcNr7kJxkcRem95WALEAeE",
+      "spotName": "Paleis van de Weemoed",
+      "presenterName": "Kor Hoebe",
+      "latitude": 52.374985699999996,
+      "longitude": 4.8999726,
+      "youtubeLink": "https://youtu.be/hRQjghrLk5s?t=290",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kor-hoebe/"
+    },
+    {
+      "placeId": "ChIJSVnzsMMJxkcRmrCfR7-rkng",
+      "spotName": "Rapha",
+      "presenterName": "Edson Sabajo",
+      "latitude": 52.3703575,
+      "longitude": 4.8861,
+      "youtubeLink": "https://youtu.be/XUF51SxY-hE?t=315",
+      "articleUrl": "https://fccentrum.nl/story/het-centrum-van-patta-co-founder-edson-sabajo/"
+    },
+    {
+      "placeId": "ChIJTXYEJQAJxkcRtXSbgoFWQZM",
+      "spotName": "Waterloopleinmarkt",
+      "presenterName": "Bastiaan van Schaik",
+      "latitude": 52.3682716,
+      "longitude": 4.9022271,
+      "youtubeLink": "https://youtu.be/UualXvQ8dac?t=151",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bastiaan-van-schaik/"
+    },
+    {
+      "placeId": "ChIJTXYEJQAJxkcRtXSbgoFWQZM",
+      "spotName": "Waterlooplein",
+      "presenterName": "Lot",
+      "latitude": 52.3682716,
+      "longitude": 4.9022271,
+      "youtubeLink": "https://youtu.be/dnwS8VjPO-8?t=12",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-lot-aka-de-haarclip-van-marie-claire/"
+    },
+    {
+      "placeId": "ChIJTZyC9cMJxkcRy3wBAaMP7hE",
+      "spotName": "Antonia",
+      "presenterName": "Anna Drijver",
+      "latitude": 52.372304799999995,
+      "longitude": 4.8875060999999995,
+      "youtubeLink": "https://youtu.be/Lei4EEgG4K8?t=143",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-anna-drijver/"
+    },
+    {
+      "placeId": "ChIJU-47RsEJxkcRy-N6FQWIIlc",
+      "spotName": "Chokka’s Blackhair Centre",
+      "presenterName": "Edsilia Rombley",
+      "latitude": 52.371489,
+      "longitude": 4.890125299999999,
+      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=5",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
+    },
+    {
+      "placeId": "ChIJUZmONUYJxkcRtvgOVTBjCR4",
+      "spotName": "Fugazzi",
+      "presenterName": "Bente",
+      "latitude": 52.3722029,
+      "longitude": 4.8876571,
+      "youtubeLink": "https://youtu.be/Ect-j6gXOQY?t=424",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bente/"
+    },
+    {
+      "placeId": "ChIJV17joLkJxkcRgQKMgy3Mzb4",
+      "spotName": "Thaise snackbar Bird",
+      "presenterName": "Edson Da Graça",
+      "latitude": 52.3745875,
+      "longitude": 4.9007778,
+      "youtubeLink": "https://youtu.be/ScRok3BsHy0?t=219",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-edson-da-graca/"
+    },
+    {
+      "placeId": "ChIJVRrXMTgJxkcRRC_9h893dO4",
+      "spotName": "Restaurant Warmoes",
+      "presenterName": "Marije Knevel",
+      "latitude": 52.36849170000001,
+      "longitude": 4.87425,
+      "youtubeLink": "https://youtu.be/V-1Lm6EGx-Y?t=416",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-marije-knevel/"
+    },
+    {
+      "placeId": "ChIJVb-u4s8JxkcRcUjnJhjzILs",
+      "spotName": "Café de Blaffende Vis",
+      "presenterName": "Kiki Bosman",
+      "latitude": 52.378534099999996,
+      "longitude": 4.883288299999999,
+      "youtubeLink": "https://youtu.be/6CdL1VPj3c8?t=181",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kiki-bosman/"
+    },
+    {
+      "placeId": "ChIJVzxSOgAJxkcR7id9ieHmR6o",
+      "spotName": "Dumplings",
+      "presenterName": "Mascha Feoktistova",
+      "latitude": 52.3750687,
+      "longitude": 4.8916091999999995,
+      "youtubeLink": "https://youtu.be/R_bjN8GHCeQ?t=21",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-beautygloss-mascha-feoktistova-in-amsterdam/"
+    },
+    {
+      "placeId": "ChIJW2m5p5UJxkcRRApNTk9pA2M",
+      "spotName": "Zeedijk",
+      "presenterName": "Nana Akwasi",
+      "latitude": 52.3743019,
+      "longitude": 4.9005618,
+      "youtubeLink": "https://youtu.be/W4aQRe0Y8sI?t=242",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-nana-asare-dit-is-een-og-foodspot/"
+    },
+    {
+      "placeId": "ChIJX5_3KvAJxkcRBTzuD3G6n_s",
+      "spotName": "Nachbar",
+      "presenterName": "Lisa Korver",
+      "latitude": 52.3720899,
+      "longitude": 4.8909365,
+      "youtubeLink": "https://youtu.be/XQdMiM_IfR8?t=202",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-lisa-korver/"
+    },
+    {
+      "placeId": "ChIJX5nq8VEJxkcRdskI3MQasqk",
+      "spotName": "Archive 1906",
+      "presenterName": "Lisa Korver",
+      "latitude": 52.383935199999996,
+      "longitude": 4.8847062999999995,
+      "youtubeLink": "https://youtu.be/XQdMiM_IfR8?t=10",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-lisa-korver/"
+    },
+    {
+      "placeId": "ChIJXb84GbgJxkcRhUQtnMdwd6Y",
+      "spotName": "McDonald's",
+      "presenterName": "Eke Bosman",
+      "latitude": 52.3768846,
+      "longitude": 4.8976679999999995,
+      "youtubeLink": "https://youtu.be/RCKb45c3jN4?t=341",
+      "articleUrl": "https://fccentrum.nl/story/het-centrum-van-eke-bosman-de-hotspots-van-amsterdam-volgens-snackspert/"
+    },
+    {
+      "placeId": "ChIJXfgsW8IJxkcRElLoQTa7EN8",
+      "spotName": "Velour",
+      "presenterName": "Freek van Noortwijk",
+      "latitude": 52.368941,
+      "longitude": 4.885735599999999,
+      "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=521",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-chef-kok-freek-van-noortwijk/"
+    },
+    {
+      "placeId": "ChIJXfgsW8IJxkcRElLoQTa7EN8",
+      "spotName": "Velour",
+      "presenterName": "Freek van Noortwijk",
+      "latitude": 52.368941,
+      "longitude": 4.885735599999999,
+      "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=521",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-freek-van-noortwijk/"
+    },
+    {
+      "placeId": "ChIJXxynOc4JxkcRcKCN8lwx4g8",
+      "spotName": "club Ministry",
+      "presenterName": "Edsilia Rombley",
+      "latitude": 52.3812469,
+      "longitude": 4.8852132,
+      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=216",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
+    },
+    {
+      "placeId": "ChIJXyWQUsAJxkcR8ULSKeIEp1E",
+      "spotName": "Arti et Amicitiae",
+      "presenterName": "Sara Shawkat",
+      "latitude": 52.368892599999995,
+      "longitude": 4.891710499999999,
+      "youtubeLink": "https://youtu.be/C_jgXKjII8I?t=148",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-sara-shawkat/"
+    },
+    {
+      "placeId": "ChIJY8AawsIJxkcR1zKeBJtqjxI",
+      "spotName": "de Wijn Winkel",
+      "presenterName": "Lot",
+      "latitude": 52.3687901,
+      "longitude": 4.883269299999999,
+      "youtubeLink": "https://youtu.be/dnwS8VjPO-8?t=324",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-lot-aka-de-haarclip-van-marie-claire/"
+    },
+    {
+      "placeId": "ChIJZ9NJM7kJxkcRmoo0WPnGIPg",
+      "spotName": "Tel",
+      "presenterName": "Geraldine Kemper",
+      "latitude": 52.371831,
+      "longitude": 4.899915,
+      "youtubeLink": "https://youtu.be/b8t0nhhf3tU?t=303",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-geraldine-kemper/"
+    },
+    {
+      "placeId": "ChIJZ9NJM7kJxkcRmoo0WPnGIPg",
+      "spotName": "Tel",
+      "presenterName": "Geraldine Kemper",
+      "latitude": 52.371831,
+      "longitude": 4.899915,
+      "youtubeLink": "https://youtu.be/b8t0nhhf3tU?t=303",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-geraldine-kemper/"
+    },
+    {
+      "placeId": "ChIJZ9NJM7kJxkcRmoo0WPnGIPg",
+      "spotName": "Vishandel Tel",
+      "presenterName": "Sara Shawkat",
+      "latitude": 52.371831,
+      "longitude": 4.899915,
+      "youtubeLink": "https://youtu.be/C_jgXKjII8I?t=306",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-sara-shawkat/"
+    },
+    {
+      "placeId": "ChIJZSnK1ugJxkcRws6BBfErWLU",
+      "spotName": "Comedy Café",
+      "presenterName": "Edson Da Graça",
+      "latitude": 52.3844407,
+      "longitude": 4.8948848,
+      "youtubeLink": "https://youtu.be/ScRok3BsHy0?t=297",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-edson-da-graca/"
+    },
+    {
+      "placeId": "ChIJZX7XhLgJxkcRatingmb6tAA",
+      "spotName": "Winston Kingdom Club",
+      "presenterName": "Edson Da Graça",
+      "latitude": 52.373999,
+      "longitude": 4.8962872,
+      "youtubeLink": "https://youtu.be/ScRok3BsHy0?t=130",
+      "articleUrl": "https://fccentrum.nl/story/spots-van-edson-da-graca/"
+    },
+    {
+      "placeId": "ChIJZae8Py0JxkcReoEUwO5ZEj8",
+      "spotName": "Breda",
+      "presenterName": "Freek van Noortwijk",
+      "latitude": 52.3753307,
+      "longitude": 4.888881,
+      "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=633",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-chef-kok-freek-van-noortwijk/"
+    },
+    {
+      "placeId": "ChIJ_1DTVccJxkcRDttrB9MqOLc",
+      "spotName": "Wynand Fockink",
+      "presenterName": "Noni Kooiman",
+      "latitude": 52.372310999999996,
+      "longitude": 4.895328999999999,
+      "youtubeLink": "https://youtu.be/1H4YZsGOJcM?t=15",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-noni-kooiman/"
+    },
+    {
+      "placeId": "ChIJ_9ucIDIJxkcRvKKi97YTHqo",
+      "spotName": "Madre",
+      "presenterName": "Eke Bosman",
+      "latitude": 52.378238700000004,
+      "longitude": 4.881634399999999,
+      "youtubeLink": "https://youtu.be/dvXSr12anJg?t=301",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-snackspert-eke-bosman/"
+    },
+    {
+      "placeId": "ChIJ_zsFOysLxkcRdwGOF7sXPJU",
+      "spotName": "Streetart Frankey",
+      "presenterName": "Marije Knevel",
+      "latitude": 52.307019499999996,
+      "longitude": 4.944352299999999,
+      "youtubeLink": "https://youtu.be/V-1Lm6EGx-Y?t=340",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-marije-knevel/"
+    },
+    {
+      "placeId": "ChIJa0mK0EIJxkcR-wwZsld88uU",
+      "spotName": "Breadwinner Bagels",
+      "presenterName": "Eke Bosman",
+      "latitude": 52.371518099999996,
+      "longitude": 4.8792632,
+      "youtubeLink": "https://youtu.be/dvXSr12anJg?t=27",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-snackspert-eke-bosman/"
+    },
+    {
+      "placeId": "ChIJa4Vy0cAJxkcRxmTug4Pxl84",
+      "spotName": "Fulu Mandarijn",
+      "presenterName": "Kor Hoebe",
+      "latitude": 52.371693699999994,
+      "longitude": 4.8925949,
+      "youtubeLink": "https://youtu.be/hRQjghrLk5s?t=83",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kor-hoebe/"
+    },
+    {
+      "placeId": "ChIJa4WGub8JxkcRwmUxRhcgtOg",
+      "spotName": "Sterk Staaltje",
+      "presenterName": "Franka Vedder",
+      "latitude": 52.3682492,
+      "longitude": 4.897057800000001,
+      "youtubeLink": "https://youtu.be/7ViTScHUi4I?t=10",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-franka-vedder/"
+    },
+    {
+      "placeId": "ChIJa7Pu1L4JxkcRKdYUFzAUtfU",
+      "spotName": "Rosalia's Menagerie",
+      "presenterName": "Dennis Huwae en Roger Bloem",
+      "latitude": 52.3717417,
+      "longitude": 4.8990357,
+      "youtubeLink": "https://youtu.be/h5Ni-cpTLBU?t=279",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-foodspots-van-sterrenchef-dennis-huwae-en-roger-bloem/"
+    },
+    {
+      "placeId": "ChIJaQ6uscMJxkcRDMkS_W9ogl4",
+      "spotName": "Laura Dolls",
+      "presenterName": "Matthijs Geuze",
+      "latitude": 52.3702584,
+      "longitude": 4.8861308999999995,
+      "youtubeLink": "https://youtu.be/ksUJm8LvP0M?t=95",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-matthijs-geuze/"
+    },
+    {
+      "placeId": "ChIJaQD6PbkJxkcRGqpEzhJQ8_k",
+      "spotName": "Tokoman",
+      "presenterName": "Dai Carter",
+      "latitude": 52.3731229,
+      "longitude": 4.9001738999999995,
+      "youtubeLink": "https://youtu.be/4GPnrkneMMI?t=123",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-dai-carter/"
+    },
+    {
+      "placeId": "ChIJb6IeerkJxkcR5i0AgoMG0Ic",
+      "spotName": "Thais eethuis O-Cha",
+      "presenterName": "Sara Shawkat",
+      "latitude": 52.3739968,
+      "longitude": 4.9019243999999995,
+      "youtubeLink": "https://youtu.be/C_jgXKjII8I?t=17",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-sara-shawkat/"
+    },
+    {
+      "placeId": "ChIJc3-Ay8YJxkcRLdYCVkUd0HY",
+      "spotName": "Warme Bakker Dam",
+      "presenterName": "Nana Akwasi",
+      "latitude": 52.372344299999995,
+      "longitude": 4.8908892999999996,
+      "youtubeLink": "https://youtu.be/W4aQRe0Y8sI?t=34",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-nana-asare-dit-is-een-og-foodspot/"
+    },
+    {
+      "placeId": "ChIJcbaGbvUJxkcR9s_HOhhxG-w",
+      "spotName": "Knippen Bij Wendy",
+      "presenterName": "Kiki Bosman",
+      "latitude": 52.376562799999995,
+      "longitude": 4.8774251,
+      "youtubeLink": "https://youtu.be/6CdL1VPj3c8?t=406",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kiki-bosman/"
+    },
+    {
+      "placeId": "ChIJcx6x3qkJxkcRtrfcyEn4VLU",
+      "spotName": "NOUS",
+      "presenterName": "Mascha Feoktistova",
+      "latitude": 52.3843793,
+      "longitude": 4.8831798,
+      "youtubeLink": "https://youtu.be/R_bjN8GHCeQ?t=157",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-beautygloss-mascha-feoktistova-in-amsterdam/"
+    },
+    {
+      "placeId": "ChIJd5pJWcIJxkcREB4G0Sf5EvE",
+      "spotName": "Café De Pels",
+      "presenterName": "Luna Hetsen",
+      "latitude": 52.368755,
+      "longitude": 4.885263,
+      "youtubeLink": "https://youtu.be/mFKEdJdEv_U?t=16",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-luna-schoudertassie/"
+    },
+    {
+      "placeId": "ChIJdWWri_IJxkcRH9AlcDMioTY",
+      "spotName": "Esther’s Cookery",
+      "presenterName": "Sara Shawkat",
+      "latitude": 52.352070999999995,
+      "longitude": 4.9046495,
+      "youtubeLink": "https://youtu.be/C_jgXKjII8I?t=39",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-sara-shawkat/"
+    },
+    {
+      "placeId": "ChIJd_yDtNAJxkcRko3UnBeygWA",
+      "spotName": "CHUN",
+      "presenterName": "Eke Bosman",
+      "latitude": 52.3704688,
+      "longitude": 4.8839422,
+      "youtubeLink": "https://youtu.be/RCKb45c3jN4?t=70",
+      "articleUrl": "https://fccentrum.nl/story/het-centrum-van-eke-bosman-de-hotspots-van-amsterdam-volgens-snackspert/"
+    },
+    {
+      "placeId": "ChIJeQFkaZUJxkcRsWcWoBFmuwU",
+      "spotName": "Club Prime",
+      "presenterName": "Eke Bosman",
+      "latitude": 52.365645699999995,
+      "longitude": 4.896298499999999,
+      "youtubeLink": "https://youtu.be/RCKb45c3jN4?t=515",
+      "articleUrl": "https://fccentrum.nl/story/het-centrum-van-eke-bosman-de-hotspots-van-amsterdam-volgens-snackspert/"
+    },
+    {
+      "placeId": "ChIJeyWVgc8JxkcRW8wgxpIWtPc",
+      "spotName": "Twee Prinsen",
+      "presenterName": "Jonas Kooyman",
+      "latitude": 52.377886399999994,
+      "longitude": 4.886475700000001,
+      "youtubeLink": "https://youtu.be/5N3jPF5SA2s?t=117",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-jonas-kooyman-aka-havermelkelite/"
+    },
+    {
+      "placeId": "ChIJf0hi-PAJxkcRzwcxo-NPhPU",
+      "spotName": "Banketbakkerij Arnold Cornelis",
+      "presenterName": "Bente",
+      "latitude": 52.3539052,
+      "longitude": 4.8818962,
+      "youtubeLink": "https://youtu.be/Ect-j6gXOQY?t=174",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bente/"
+    },
+    {
+      "placeId": "ChIJfwTzSI0JxkcRWUNOuAiPlAU",
+      "spotName": "Tjin's",
+      "presenterName": "Dennis Huwae en Roger Bloem",
+      "latitude": 52.354951299999996,
+      "longitude": 4.8931691,
+      "youtubeLink": "https://youtu.be/h5Ni-cpTLBU?t=163",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-foodspots-van-sterrenchef-dennis-huwae-en-roger-bloem/"
+    },
+    {
+      "placeId": "ChIJhSGe65QJxkcRNZjkTKAL37c",
+      "spotName": "Fabula Rosa",
+      "presenterName": "Lot",
+      "latitude": 52.373583,
+      "longitude": 4.8822028,
+      "youtubeLink": "https://youtu.be/dnwS8VjPO-8?t=216",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-lot-aka-de-haarclip-van-marie-claire/"
+    },
+    {
+      "placeId": "ChIJhZ_tYcYJxkcRLU4yNll1hLM",
+      "spotName": "Caldi e Freddi",
+      "presenterName": "Joey Jaq",
+      "latitude": 52.3750058,
+      "longitude": 4.890746699999999,
+      "youtubeLink": "https://youtu.be/id6yPRQ51Bw?t=208",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-joey-jaq/"
+    },
+    {
+      "placeId": "ChIJhfEl1OsJxkcRS9MgacBKxiU",
+      "spotName": "Casa del Gusto",
+      "presenterName": "Niels Oosthoek",
+      "latitude": 52.3640614,
+      "longitude": 4.8877583,
+      "youtubeLink": "https://youtu.be/H2gRuYKTZL4?t=214",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-niels-oosthoek/"
+    },
+    {
+      "placeId": "ChIJhfEl1OsJxkcRS9MgacBKxiU",
+      "spotName": "Casa Del Gusto",
+      "presenterName": "Samuel Levie",
+      "latitude": 52.3640614,
+      "longitude": 4.8877583,
+      "youtubeLink": "https://youtu.be/HB9_Rruot-4?t=92",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-samuel-levie/"
+    },
+    {
+      "placeId": "ChIJiarGYMcJxkcRmqRlG68PrRo",
+      "spotName": "Cut Throat",
+      "presenterName": "Nana Akwasi",
+      "latitude": 52.374417199999996,
+      "longitude": 4.8959736,
+      "youtubeLink": "https://youtu.be/W4aQRe0Y8sI?t=140",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-nana-asare-dit-is-een-og-foodspot/"
+    },
+    {
+      "placeId": "ChIJk8D7jJIJxkcR1GafUi-c-pc",
+      "spotName": "kledingwinkel Stieglitz",
+      "presenterName": "Ginny Ramkisoen",
+      "latitude": 52.3702164,
+      "longitude": 4.8855376999999995,
+      "youtubeLink": "https://youtu.be/11cKUGLCGsQ?t=205",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-ginny-ramkisoen-ginnyranu/"
+    },
+    {
+      "placeId": "ChIJkTfHsL8JxkcRluZVwVZJ5BM",
+      "spotName": "Droog",
+      "presenterName": "Judith Zilversmith",
+      "latitude": 52.3683956,
+      "longitude": 4.8973055,
+      "youtubeLink": "https://youtu.be/vEB9xYPNZlg?t=18",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-judith-zilversmit/"
+    },
+    {
+      "placeId": "ChIJlcPN_6kJxkcR2QA28gL6gr8",
+      "spotName": "Kafenion",
+      "presenterName": "Elisabeth Grijzenhout",
+      "latitude": 52.374677,
+      "longitude": 4.8813721999999995,
+      "youtubeLink": "https://youtu.be/VrwAMspX-Bs?t=35",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-elisabeth-grijzenhout/"
+    },
+    {
+      "placeId": "ChIJmZ6loZIJxkcRuT2oCOgT1vU",
+      "spotName": "Prinsen Eiland",
+      "presenterName": "Kiki Boreel",
+      "latitude": 52.3848815,
+      "longitude": 4.8879072,
+      "youtubeLink": "https://youtu.be/zIb-yjLE1KI?t=111",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kiki-boreel/"
+    },
+    {
+      "placeId": "ChIJm_p73sMJxkcRvQGH0Rjb4nI",
+      "spotName": "Ela Restobar",
+      "presenterName": "Marwa Omari",
+      "latitude": 52.369517099999996,
+      "longitude": 4.8808704999999994,
+      "youtubeLink": "https://youtu.be/GT9tfl_qYZE?t=155",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-marwa-omari/"
+    },
+    {
+      "placeId": "ChIJnx5DIgQJxkcRUQWykI7BrVs",
+      "spotName": "Laan",
+      "presenterName": "Luna Hetsen",
+      "latitude": 52.361531199999995,
+      "longitude": 4.898748299999999,
+      "youtubeLink": "https://youtu.be/mFKEdJdEv_U?t=211",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-luna-schoudertassie/"
+    },
+    {
+      "placeId": "ChIJnybTiqkJxkcRVtXHKU6Lo-0",
+      "spotName": "Dream Unit",
+      "presenterName": "Bente",
+      "latitude": 52.373793299999996,
+      "longitude": 4.8974272,
+      "youtubeLink": "https://youtu.be/Ect-j6gXOQY?t=346",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bente/"
+    },
+    {
+      "placeId": "ChIJobHenXUJxkcRwZXqlB-XlzA",
+      "spotName": "Screaming Beans",
+      "presenterName": "Dai Carter",
+      "latitude": 52.368960599999994,
+      "longitude": 4.883902,
+      "youtubeLink": "https://youtu.be/4GPnrkneMMI?t=194",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-dai-carter/"
+    },
+    {
+      "placeId": "ChIJobHenXUJxkcRwZXqlB-XlzA",
+      "spotName": "Coffee Roasters",
+      "presenterName": "Franka Vedder",
+      "latitude": 52.368960599999994,
+      "longitude": 4.883902,
+      "youtubeLink": "https://youtu.be/7ViTScHUi4I?t=110",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-franka-vedder/"
+    },
+    {
+      "placeId": "ChIJp8WKOdsJxkcRVL-xZ7kdT60",
+      "spotName": "Café Chris",
+      "presenterName": "Elisabeth Grijzenhout",
+      "latitude": 52.37427520000001,
+      "longitude": 4.8816114,
+      "youtubeLink": "https://youtu.be/VrwAMspX-Bs?t=134",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-elisabeth-grijzenhout/"
+    },
+    {
+      "placeId": "ChIJpRPs5r0JxkcRUUIx22yPJX0",
+      "spotName": "Nationale Opera \u0026 Ballet",
+      "presenterName": "Niels Oosthoek",
+      "latitude": 52.367306199999994,
+      "longitude": 4.900926699999999,
+      "youtubeLink": "https://youtu.be/H2gRuYKTZL4?t=15",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-niels-oosthoek/"
+    },
+    {
+      "placeId": "ChIJq2Q-tWIJxkcRKmTj1VEtQ5o",
+      "spotName": "BTY Club",
+      "presenterName": "Marwa Omari",
+      "latitude": 52.372971,
+      "longitude": 4.8881573,
+      "youtubeLink": "https://youtu.be/GT9tfl_qYZE?t=217",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-marwa-omari/"
+    },
+    {
+      "placeId": "ChIJqcLw_cEJxkcRtKDQGbnuJZo",
+      "spotName": "Scheltema",
+      "presenterName": "Anna Drijver",
+      "latitude": 52.3721907,
+      "longitude": 4.893468599999999,
+      "youtubeLink": "https://youtu.be/Lei4EEgG4K8?t=6",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-anna-drijver/"
+    },
+    {
+      "placeId": "ChIJqcLw_cEJxkcRtKDQGbnuJZo",
+      "spotName": "Scheltema",
+      "presenterName": "Dai Carter",
+      "latitude": 52.3721907,
+      "longitude": 4.893468599999999,
+      "youtubeLink": "https://youtu.be/4GPnrkneMMI?t=282",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-dai-carter/"
+    },
+    {
+      "placeId": "ChIJqdbEheEJxkcR6NGYPtQz_Vw",
+      "spotName": "Bon Ton",
+      "presenterName": "Casper Reinders",
+      "latitude": 52.3582344,
+      "longitude": 4.8892748,
+      "youtubeLink": "https://youtu.be/h_f4U1g0vng?t=351",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-casper-reinders/"
+    },
+    {
+      "placeId": "ChIJqypVqcYJxkcR0z5yqtGiQQQ",
+      "spotName": "X-Bank",
+      "presenterName": "Matthijs Geuze",
+      "latitude": 52.37273,
+      "longitude": 4.8893965999999995,
+      "youtubeLink": "https://youtu.be/ksUJm8LvP0M?t=266",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-matthijs-geuze/"
+    },
+    {
+      "placeId": "ChIJrSVzLIPgxUcRG4kz0UNFwlg",
+      "spotName": "Polspotten",
+      "presenterName": "Joey Jaq",
+      "latitude": 52.377952799999996,
+      "longitude": 4.8819235,
+      "youtubeLink": "https://youtu.be/id6yPRQ51Bw?t=29",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-joey-jaq/"
+    },
+    {
+      "placeId": "ChIJrWrMsKYJxkcRKsDfcY8eD7s",
+      "spotName": "Marineterrein",
+      "presenterName": "Dai Carter",
+      "latitude": 52.3725281,
+      "longitude": 4.9178121,
+      "youtubeLink": "https://youtu.be/4GPnrkneMMI?t=42",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-dai-carter/"
+    },
+    {
+      "placeId": "ChIJrWrMsKYJxkcRKsDfcY8eD7s",
+      "spotName": "Marinetterrein",
+      "presenterName": "Jonas Kooyman",
+      "latitude": 52.3725281,
+      "longitude": 4.9178121,
+      "youtubeLink": "https://youtu.be/5N3jPF5SA2s?t=286",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-jonas-kooyman-aka-havermelkelite/"
+    },
+    {
+      "placeId": "ChIJs58wK0EJxkcRnfOdKEtmH1M",
+      "spotName": "Diptyque",
+      "presenterName": "Joey Jaq",
+      "latitude": 52.368987999999995,
+      "longitude": 4.8829858999999995,
+      "youtubeLink": "https://youtu.be/id6yPRQ51Bw?t=326",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-joey-jaq/"
+    },
+    {
+      "placeId": "ChIJsY8odsgJxkcRX1QkUoMSOKk",
+      "spotName": "Bitterzoet",
+      "presenterName": "Dio",
+      "latitude": 52.37739200000001,
+      "longitude": 4.89413,
+      "youtubeLink": "https://youtu.be/-9XrLWU4JgE?t=17",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-dio/"
+    },
+    {
+      "placeId": "ChIJt7UYj8EJxkcRoFnGBP6o5Jk",
+      "spotName": "Café Hoppen",
+      "presenterName": "Ginny Ramkisoen",
+      "latitude": 52.3688139,
+      "longitude": 4.8886278,
+      "youtubeLink": "https://youtu.be/11cKUGLCGsQ?t=197",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-ginny-ramkisoen-ginnyranu/"
+    },
+    {
+      "placeId": "ChIJtdZbkaYJxkcRc9Qcc-bXUGc",
+      "spotName": "Pension Homeland",
+      "presenterName": "Dai Carter",
+      "latitude": 52.373020600000004,
+      "longitude": 4.9167426999999995,
+      "youtubeLink": "https://youtu.be/4GPnrkneMMI?t=46",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-dai-carter/"
+    },
+    {
+      "placeId": "ChIJu61sS84JxkcR9DvNepP2cfU",
+      "spotName": "Daalder",
+      "presenterName": "Dennis Huwae en Roger Bloem",
+      "latitude": 52.364255899999996,
+      "longitude": 4.8590561,
+      "youtubeLink": "https://youtu.be/h5Ni-cpTLBU?t=536",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-foodspots-van-sterrenchef-dennis-huwae-en-roger-bloem/"
+    },
+    {
+      "placeId": "ChIJuXLPYOgJxkcRmVz4gil_ZnQ",
+      "spotName": "Jimmy Woo",
+      "presenterName": "Casper Reinders",
+      "latitude": 52.3647802,
+      "longitude": 4.882274499999999,
+      "youtubeLink": "https://youtu.be/h_f4U1g0vng?t=283",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-casper-reinders/"
+    },
+    {
+      "placeId": "ChIJvXfx10EJxkcR4EKUJKKNTqE",
+      "spotName": "café40",
+      "presenterName": "Noni Kooiman",
+      "latitude": 52.3752213,
+      "longitude": 4.8974056,
+      "youtubeLink": "https://youtu.be/1H4YZsGOJcM?t=87",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-noni-kooiman/"
+    },
+    {
+      "placeId": "ChIJw0-tDsAJxkcRaW2mhNKHU0Y",
+      "spotName": "Hotel L’Europe",
+      "presenterName": "Judith Zilversmith",
+      "latitude": 52.367511199999996,
+      "longitude": 4.8942865,
+      "youtubeLink": "https://youtu.be/vEB9xYPNZlg?t=72",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-judith-zilversmit/"
+    },
+    {
+      "placeId": "ChIJw6RppvoJxkcR6ZFbJ2aUYDM",
+      "spotName": "Concertgebouw",
+      "presenterName": "Edsilia Rombley",
+      "latitude": 52.356325,
+      "longitude": 4.879029600000001,
+      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=322",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
+    },
+    {
+      "placeId": "ChIJw9nBgNsJxkcRgutOlUucTsg",
+      "spotName": "Iraanse supermarkt Roos",
+      "presenterName": "Tatjana Almuli",
+      "latitude": 52.372724,
+      "longitude": 4.878747,
+      "youtubeLink": "https://youtu.be/mwONig2bDGE?t=159",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-tatjana-almuni/"
+    },
+    {
+      "placeId": "ChIJxV_2EL8JxkcRlPfWXSuwkLA",
+      "spotName": "The Book Exchange",
+      "presenterName": "Marwa Omari",
+      "latitude": 52.3700725,
+      "longitude": 4.8974242,
+      "youtubeLink": "https://youtu.be/GT9tfl_qYZE?t=24",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-marwa-omari/"
+    },
+    {
+      "placeId": "ChIJxWphegAJxkcRhiXEhc2VNfU",
+      "spotName": "Plantenmarkt op het Amstelveld",
+      "presenterName": "Luna Hetsen",
+      "latitude": 52.3623048,
+      "longitude": 4.8976419,
+      "youtubeLink": "https://youtu.be/mFKEdJdEv_U?t=153",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-luna-schoudertassie/"
+    },
+    {
+      "placeId": "ChIJxaB3v8AJxkcRDuTc9pwZ1hI",
+      "spotName": "The Lobby",
+      "presenterName": "Béla Becht",
+      "latitude": 52.370953099999994,
+      "longitude": 4.8936747,
+      "youtubeLink": "https://youtu.be/SdxaMscP6Bw?t=253",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bela-becht/"
+    },
+    {
+      "placeId": "ChIJy8k2FukJxkcRxo0X4kT46Wk",
+      "spotName": "Taste of Culture",
+      "presenterName": "Dennis Huwae en Roger Bloem",
+      "latitude": 52.3630556,
+      "longitude": 4.8851191,
+      "youtubeLink": "https://youtu.be/h5Ni-cpTLBU?t=418",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-foodspots-van-sterrenchef-dennis-huwae-en-roger-bloem/"
+    },
+    {
+      "placeId": "ChIJySPT_aPjxUcR_xVQncvkvNY",
+      "spotName": "Cinema De Vlugt",
+      "presenterName": "Dio",
+      "latitude": 52.3800029,
+      "longitude": 4.8274592,
+      "youtubeLink": "https://youtu.be/-9XrLWU4JgE?t=389",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-dio/"
+    },
+    {
+      "placeId": "ChIJycEfQtsJxkcREQJCKe2m8dk",
+      "spotName": "Coppenhagen Kralen",
+      "presenterName": "Béla Becht",
+      "latitude": 52.373597999999994,
+      "longitude": 4.8808359999999995,
+      "youtubeLink": "https://youtu.be/SdxaMscP6Bw?t=91",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-bela-becht/"
+    },
+    {
+      "placeId": "ChIJzTMQX8MJxkcRGm5RH6IpkDA",
+      "spotName": "Terra",
+      "presenterName": "Samuel Levie",
+      "latitude": 52.3723567,
+      "longitude": 4.8836549,
+      "youtubeLink": "https://youtu.be/HB9_Rruot-4?t=186",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-samuel-levie/"
+    },
+    {
+      "placeId": "ChIJzYfSWMwJxkcR6va-Ud95Z5g",
+      "spotName": "Galerie Moon",
+      "presenterName": "Kiki Boreel",
+      "latitude": 52.3853244,
+      "longitude": 4.8888644,
+      "youtubeLink": "https://youtu.be/zIb-yjLE1KI?t=142",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-kiki-boreel/"
+    }
+  ],
+  "presenters": [
+    {
+      "presenterName": "Anna Drijver"
+    },
+    {
+      "presenterName": "Bastiaan van Schaik"
+    },
+    {
+      "presenterName": "Bente"
+    },
+    {
+      "presenterName": "Béla Becht"
+    },
+    {
+      "presenterName": "Casper Reinders"
+    },
+    {
+      "presenterName": "Dai Carter"
+    },
+    {
+      "presenterName": "Dennis Huwae en Roger Bloem"
+    },
+    {
+      "presenterName": "Dio"
+    },
+    {
+      "presenterName": "Edsilia Rombley"
+    },
+    {
+      "presenterName": "Edson Da Graça"
+    },
+    {
+      "presenterName": "Edson Sabajo"
+    },
+    {
+      "presenterName": "Eke Bosman"
+    },
+    {
+      "presenterName": "Elisabeth Grijzenhout"
+    },
+    {
+      "presenterName": "Franka Vedder"
+    },
+    {
+      "presenterName": "Freek van Noortwijk"
+    },
+    {
+      "presenterName": "Geraldine Kemper"
+    },
+    {
+      "presenterName": "Ginny Ramkisoen"
+    },
+    {
+      "presenterName": "Joey Jaq"
+    },
+    {
+      "presenterName": "Jonas Kooyman"
+    },
+    {
+      "presenterName": "Judith Zilversmith"
+    },
+    {
+      "presenterName": "Kiki Boreel"
+    },
+    {
+      "presenterName": "Kiki Bosman"
+    },
+    {
+      "presenterName": "Kor Hoebe"
+    },
+    {
+      "presenterName": "Lisa Korver"
+    },
+    {
+      "presenterName": "Lot"
+    },
+    {
+      "presenterName": "Luna Hetsen"
+    },
+    {
+      "presenterName": "Marije Knevel"
+    },
+    {
+      "presenterName": "Marwa Omari"
+    },
+    {
+      "presenterName": "Mascha Feoktistova"
+    },
+    {
+      "presenterName": "Matthijs Geuze"
+    },
+    {
+      "presenterName": "Merlijn en Vlinder Kamerling"
+    },
+    {
+      "presenterName": "Nana Akwasi"
+    },
+    {
+      "presenterName": "Niels Oosthoek"
+    },
+    {
+      "presenterName": "Noni Kooiman"
+    },
+    {
+      "presenterName": "Pepijn Diepstraten"
+    },
+    {
+      "presenterName": "Ray Fuego"
+    },
+    {
+      "presenterName": "Samuel Levie"
+    },
+    {
+      "presenterName": "Sara Shawkat"
+    },
+    {
+      "presenterName": "Tatjana Almuli"
+    },
+    {
+      "presenterName": "Whitney Valerie"
+    }
+  ]
+}
