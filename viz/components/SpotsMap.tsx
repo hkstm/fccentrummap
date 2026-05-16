@@ -151,24 +151,27 @@ export function SpotsMap() {
             />
           </a>
         </header>
-        <section className="mapTitleBar" aria-label="Map section title">
+        <section className="mapTitleBar relative z-10" aria-label="Map section title">
           <svg className="mapTitleIcon" xmlns="http://www.w3.org/2000/svg" width="17" height="24" viewBox="0 0 17 24" fill="none" aria-hidden="true">
             <path d="M14.6691 6.65563V4.39429H12.3491V2.26804H9.9469V0H7.02838V2.26804H4.6279V4.39429H2.30791V6.65563H0V13.9683C0.0195488 17.0067 1.23618 19.4226 3.61423 21.1503C4.66869 21.9086 5.77519 22.5963 6.92603 23.2084L8.50144 24L10.0872 23.2017L10.097 23.1973C11.2408 22.5889 12.3404 21.9051 13.3881 21.1509C15.7673 19.4204 16.9828 16.9966 17 13.9398V6.65563H14.6691Z" fill="#ED1C24" />
           </svg>
           <h1 className="mapTitleText">Map</h1>
           <div className="mapTitleDivider" aria-hidden="true" />
         </section>
-        <Map
-          mapId={mapId}
-          renderingType="VECTOR"
-          mapTypeControl={false}
-          defaultCenter={{ lat: 52.3676, lng: 4.9041 }}
-          defaultZoom={12}
-          gestureHandling="greedy"
-        >
-          <BoundsFitter />
-          <SpotsLayer />
-        </Map>
+        <div className="relative flex-1">
+          <Map
+            mapId={mapId}
+            renderingType="VECTOR"
+            mapTypeControl={false}
+            defaultCenter={{ lat: 52.3676, lng: 4.9041 }}
+            defaultZoom={12}
+            gestureHandling="greedy"
+            style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
+          >
+            <BoundsFitter />
+            <SpotsLayer />
+          </Map>
+        </div>
       </main>
     </APIProvider>
   );
