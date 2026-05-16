@@ -221,7 +221,7 @@ func transcribeAudioCommand() *cli.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("transcription_id=%d\n", res.TranscriptionID)
+			fmt.Printf("transcription_ids=%v\n", res.TranscriptionIDs)
 			return nil
 		},
 	}
@@ -235,14 +235,14 @@ func extractSpotsCommand() *cli.Command {
 			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite (file not supported yet)"},
 			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database"},
 			&cli.StringFlag{Name: "out-dir", Value: cliutil.DefaultDataDir(), Usage: "directory for extraction artifacts"},
-			&cli.StringFlag{Name: "gemma-model", Value: defaultGemmaModel(), Usage: "Gemma model identifier"},
+			&cli.StringFlag{Name: "model", Value: defaultGenAIModel(), Usage: "GenAI model identifier (e.g. gemini-3.1-pro-preview)"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			mode := cmd.String("io")
 			if err := validateStageMode("extract-spots", mode); err != nil {
 				return err
 			}
-			req, err := normalizeExtractSpotsRequest(cmd.String("db-path"), cmd.String("out-dir"), cmd.String("gemma-model"))
+			req, err := normalizeExtractSpotsRequest(cmd.String("db-path"), cmd.String("out-dir"), cmd.String("model"))
 			if err != nil {
 				return err
 			}
@@ -251,7 +251,7 @@ func extractSpotsCommand() *cli.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("spot_extraction_id=%d\n", res.SpotExtractionID)
+			fmt.Printf("spot_extraction_ids=%v\n", res.SpotExtractionIDs)
 			return nil
 		},
 	}
@@ -377,19 +377,19 @@ func normalizeTranscribeAudioRequest(dbPath, language string) (transcribeaudio.R
 	return req, nil
 }
 
-func normalizeExtractSpotsRequest(dbPath, outDir, gemmaModel string) (extractspots.Request, error) {
+func normalizeExtractSpotsRequest(dbPath, outDir, model string) (extractspots.Request, error) {
 	req := extractspots.Request{
 		DBPath:     strings.TrimSpace(dbPath),
 		OutDir:     strings.TrimSpace(outDir),
-		GemmaModel: strings.TrimSpace(gemmaModel),
+		Model: strings.TrimSpace(model),
 		APIKey:     defaultGeminiAPIKey(),
 		Endpoint:   strings.TrimSpace(os.Getenv("GOOGLE_GENERATIVE_LANGUAGE_ENDPOINT")),
 	}
 	if req.OutDir == "" {
 		req.OutDir = cliutil.DefaultDataDir()
 	}
-	if req.GemmaModel == "" {
-		req.GemmaModel = defaultGemmaModel()
+	if req.Model == "" {
+		req.Model = defaultGenAIModel()
 	}
 	return req, nil
 }
@@ -432,11 +432,11 @@ func validateStageMode(stage, mode string) error {
 	return nil
 }
 
-func defaultGemmaModel() string {
-	if model := strings.TrimSpace(os.Getenv("GEMMA_MODEL")); model != "" {
+func defaultGenAIModel() string {
+	if model := strings.TrimSpace(os.Getenv("MODEL")); model != "" {
 		return model
 	}
-	return "gemma-4-31b-it"
+	return "gemini-3.1-pro-preview"
 }
 
 func defaultGeminiAPIKey() string {

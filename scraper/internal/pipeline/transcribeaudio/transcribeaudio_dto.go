@@ -7,8 +7,8 @@ type Request struct {
 }
 
 type Response struct {
-	Identity        string `json:"identity"`
-	Stage           string `json:"stage"`
-	TranscriptionID int64  `json:"transcriptionId,omitempty"`
-	OutputPath      string `json:"outputPath,omitempty"`
+	Identity         string  `json:"identity"`
+	Stage            string  `json:"stage"`
+	TranscriptionIDs []int64 `json:"transcriptionIds,omitempty"`
+	OutputPath       string  `json:"outputPath,omitempty"`
 }
