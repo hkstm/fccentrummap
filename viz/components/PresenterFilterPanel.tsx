@@ -25,13 +25,13 @@ export function PresenterFilterPanel({
       <Card className="flex flex-col min-h-0 pointer-events-auto max-h-full">
         <CardHeader className="pb-3 flex-none">
         <CardTitle className="text-lg font-bold uppercase [font-family:'Garage_Gothic',Inter,'Helvetica_Neue',helvetica,arial,sans-serif]">
-          Presenters
+          Spots van:
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 flex flex-col flex-1 min-h-0">
         <div className="flex gap-2 flex-none">
-          <Button variant="outline" size="sm" onClick={selectAll}>Select all</Button>
-          <Button variant="outline" size="sm" onClick={deselectAll}>Deselect all</Button>
+          <Button variant="outline" size="sm" onClick={selectAll}>Alles selecteren</Button>
+          <Button variant="outline" size="sm" onClick={deselectAll}>Alles deselecteren</Button>
         </div>
         <ScrollArea className="flex flex-col flex-1 min-h-0 pr-3 -mr-1">
           <ul className="space-y-1">
