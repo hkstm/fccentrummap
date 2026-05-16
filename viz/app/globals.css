@@ -46,12 +46,13 @@ html, body { margin: 0; padding: 0; font-family: var(--fc-font-sans); background
   background: #000;
   border-bottom: 4px solid #fff;
   padding: 10px 16px;
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
 }
 
 .brandLogoLink {
+  grid-column: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;

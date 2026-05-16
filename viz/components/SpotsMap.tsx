@@ -150,6 +150,11 @@ export function SpotsMap() {
               height={67}
             />
           </a>
+          <div className="justify-self-end self-start mt-1">
+            <a href="https://hkstm.dev" target="_blank" rel="noopener noreferrer" className="!text-white hover:!text-[#e30613] underline decoration-transparent hover:decoration-[#e30613] underline-offset-4 text-[18px] font-bold uppercase [font-family:'Garage_Gothic',Inter,'Helvetica_Neue',helvetica,arial,sans-serif] transition-colors duration-300">
+              created by hkstm.dev
+            </a>
+          </div>
         </header>
         <section className="mapTitleBar relative z-10" aria-label="Map section title">
           <svg className="mapTitleIcon" xmlns="http://www.w3.org/2000/svg" width="17" height="24" viewBox="0 0 17 24" fill="none" aria-hidden="true">
