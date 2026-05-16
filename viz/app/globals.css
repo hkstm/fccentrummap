@@ -65,6 +65,75 @@ html, body { margin: 0; padding: 0; font-family: var(--fc-font-sans); background
   display: block;
 }
 
+.createdByLink {
+  --created-by-icon-size: 1.15rem;
+  --created-by-underline-width: 1.5px;
+  --created-by-underline-progress: 0%;
+
+  position: relative;
+  display: inline-block;
+  overflow: visible;
+  color: #fff;
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-transform: uppercase;
+  font-family: "Garage Gothic", Inter, "Helvetica Neue", helvetica, arial, sans-serif;
+  transition: color 0.3s ease;
+}
+
+.createdByLink::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: inline-block;
+  width: var(--created-by-underline-progress);
+  height: 100%;
+  border-bottom: var(--created-by-underline-width) solid currentColor;
+  transform: translateY(var(--created-by-underline-width));
+  box-sizing: border-box;
+  z-index: 0;
+  will-change: width, border-bottom;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.createdByLink > svg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: calc(var(--created-by-icon-size) / 2);
+  height: calc(var(--created-by-icon-size) / 2);
+  transform: translate(75%, 50%);
+  transition: transform 0.165s ease-out, color 0.3s ease;
+}
+
+@media (hover: hover) {
+  .createdByLink:hover {
+    color: var(--fc-color-accent);
+  }
+
+  .createdByLink:hover::before {
+    animation: createdByHyperLink 0.66s ease forwards;
+  }
+
+  .createdByLink:hover > svg {
+    transform: translate(calc(75% + 1px), calc(50% - 2px));
+  }
+}
+
+@keyframes createdByHyperLink {
+  0% {
+    width: 0;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
 .layout > div[style] { border-radius: var(--fc-radius-lg); overflow: hidden; min-height: 70dvh; }
 
 .mapTitleBar {

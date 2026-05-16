@@ -186,8 +186,11 @@ export function SpotsMap() {
             />
           </a>
           <div className="hidden justify-self-end self-start mt-1 sm:block">
-            <a href="https://hkstm.dev" target="_blank" rel="noopener noreferrer" className="!text-white hover:!text-[#e30613] underline decoration-transparent hover:decoration-[#e30613] underline-offset-4 text-[18px] font-bold uppercase [font-family:'Garage_Gothic',Inter,'Helvetica_Neue',helvetica,arial,sans-serif] transition-colors duration-300">
+            <a href="https://hkstm.dev" target="_blank" rel="noopener noreferrer" className="createdByLink">
               created by hkstm.dev
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 12 12" aria-hidden="true">
+                <path fill="currentColor" d="M11 8H9.5V3.56L5.071 7.99l-1.06-1.061L8.44 2.5H4V1h7v7Z" />
+              </svg>
             </a>
           </div>
         </header>
