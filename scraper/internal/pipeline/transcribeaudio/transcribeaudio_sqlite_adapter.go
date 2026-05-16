@@ -28,26 +28,44 @@ func (a *SQLiteAdapter) Run(ctx context.Context, req Request) (Response, error) 
 		return Response{}, err
 	}
 
-	src, err := repo.GetLatestAudioSource()
+	rows, err := repo.ListAudioSourcesPendingTranscription()
 	if err != nil {
 		return Response{}, err
 	}
-	if src == nil {
-		return Response{}, fmt.Errorf("no audio source rows with non-empty audio_blob found")
+	if len(rows) == 0 {
+		return Response{Identity: "transcriptions-none", Stage: "transcribeaudio"}, nil
 	}
 
+	var processedIDs []int64
+	for i, row := range rows {
+		fmt.Printf("Processing row %d/%d (AudioSourceID=%d)\n", i+1, len(rows), row.AudioSourceID)
+		id, err := processRow(repo, row, req, ctx)
+		if err != nil {
+			return Response{}, fmt.Errorf("processing audio source %d: %w", row.AudioSourceID, err)
+		}
+		processedIDs = append(processedIDs, id)
+	}
+
+	return Response{
+		Identity:         fmt.Sprintf("transcriptions-batch-%d", processedIDs[len(processedIDs)-1]),
+		Stage:            "transcribeaudio",
+		TranscriptionIDs: processedIDs,
+	}, nil
+}
+
+func processRow(repo *repository.Repository, src models.ArticleAudioSource, req Request, ctx context.Context) (int64, error) {
 	lang := req.Language
 	if lang == "" {
 		lang = "nl"
 	}
 	client := transcription.NewMurmelClient(defaultMurmelAPIKey())
 	if err := client.Validate(); err != nil {
-		return Response{}, err
+		return 0, err
 	}
 	filename := fmt.Sprintf("article_audio_source_%d.%s", src.AudioSourceID, cliutil.SafeExt(src.AudioFormat))
 	res, err := client.Transcribe(ctx, filename, src.AudioBlob, lang)
 	if err != nil {
-		return Response{}, err
+		return 0, err
 	}
 
 	msg, jsonErr := canonicalizeJSON(res.Body)
@@ -70,10 +88,10 @@ func (a *SQLiteAdapter) Run(ctx context.Context, req Request) (Response, error) 
 		ErrorMessage:     res.ErrMessage,
 	})
 	if err != nil {
-		return Response{}, err
+		return 0, err
 	}
 
-	return Response{Identity: fmt.Sprintf("transcription-%d", id), Stage: "transcribeaudio", TranscriptionID: id}, nil
+	return id, nil
 }
 
 func defaultMurmelAPIKey() string {

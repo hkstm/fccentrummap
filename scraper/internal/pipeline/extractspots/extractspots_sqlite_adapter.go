@@ -22,9 +22,9 @@ func (a *SQLiteAdapter) Run(ctx context.Context, req Request) (Response, error) 
 		return Response{}, err
 	}
 
-	res, err := extractspots.Run(ctx, repo, extractspots.Options{
+	results, err := extractspots.Run(ctx, repo, extractspots.Options{
 		OutDir:     req.OutDir,
-		GemmaModel: req.GemmaModel,
+		Model: req.Model,
 		APIKey:     req.APIKey,
 		Endpoint:   req.Endpoint,
 	})
@@ -32,5 +32,18 @@ func (a *SQLiteAdapter) Run(ctx context.Context, req Request) (Response, error) 
 		return Response{}, err
 	}
 
-	return Response{Identity: fmt.Sprintf("spot-extraction-%d", res.SpotExtractionID), Stage: "extractspots", SpotExtractionID: res.SpotExtractionID}, nil
+	var processedIDs []int64
+	for _, res := range results {
+		processedIDs = append(processedIDs, res.SpotExtractionID)
+	}
+
+	if len(processedIDs) == 0 {
+		return Response{Identity: "spot-extraction-none", Stage: "extractspots"}, nil
+	}
+
+	return Response{
+		Identity:          fmt.Sprintf("spot-extraction-batch-%d", processedIDs[len(processedIDs)-1]),
+		Stage:             "extractspots",
+		SpotExtractionIDs: processedIDs,
+	}, nil
 }

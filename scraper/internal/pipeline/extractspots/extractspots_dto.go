@@ -3,15 +3,15 @@ package extractspots
 type Request struct {
 	DBPath     string
 	OutDir     string
-	GemmaModel string
+	Model string
 	APIKey     string
 	Endpoint   string
 	InputPath  string
 }
 
 type Response struct {
-	Identity         string `json:"identity"`
-	Stage            string `json:"stage"`
-	SpotExtractionID int64  `json:"spotExtractionId,omitempty"`
-	OutputPath       string `json:"outputPath,omitempty"`
+	Identity          string  `json:"identity"`
+	Stage             string  `json:"stage"`
+	SpotExtractionIDs []int64 `json:"spotExtractionIds,omitempty"`
+	OutputPath        string  `json:"outputPath,omitempty"`
 }

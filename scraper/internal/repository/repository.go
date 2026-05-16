@@ -17,7 +17,6 @@ type Repository struct {
 	db *sql.DB
 }
 
-
 func init() {
 	sqlite.RegisterConnectionHook(func(conn sqlite.ExecQuerierContext, _ string) error {
 		_, err := conn.ExecContext(context.Background(), "PRAGMA foreign_keys = ON", nil)
@@ -321,6 +320,43 @@ func (r *Repository) GetLatestAudioSource() (*models.ArticleAudioSource, error) 
 	return &src, nil
 }
 
+func (r *Repository) ListAudioSourcesPendingTranscription() ([]models.ArticleAudioSource, error) {
+	rows, err := r.db.Query(
+		`SELECT s.audio_source_id, s.article_fetch_id, s.youtube_url, s.audio_format, s.mime_type, s.audio_blob, s.byte_size, s.acquired_at
+		 FROM audio_sources s
+		 LEFT JOIN audio_transcriptions t ON t.audio_source_id = s.audio_source_id
+		 WHERE s.audio_blob IS NOT NULL AND length(s.audio_blob) > 0
+		   AND t.transcription_id IS NULL
+		 ORDER BY s.audio_source_id ASC`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying pending audio_sources: %w", err)
+	}
+	defer rows.Close()
+	var out []models.ArticleAudioSource
+
+	for rows.Next() {
+		var src models.ArticleAudioSource
+		if err := rows.Scan(
+			&src.AudioSourceID,
+			&src.ArticleRawID,
+			&src.YouTubeURL,
+			&src.AudioFormat,
+			&src.MIMEType,
+			&src.AudioBlob,
+			&src.ByteSize,
+			&src.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning pending article audio sources: %w", err)
+		}
+		out = append(out, src)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating pending article audio sources: %w", err)
+	}
+	return out, nil
+}
+
 func (r *Repository) UpsertAudioTranscription(t models.ArticleAudioTranscription) (int64, error) {
 	var transcriptionID int64
 	err := r.db.QueryRow(
@@ -347,6 +383,8 @@ func (r *Repository) UpsertAudioTranscription(t models.ArticleAudioTranscription
 	}
 	return transcriptionID, nil
 }
+
+
 
 func (r *Repository) GetLatestAudioTranscription() (*models.ArticleAudioTranscription, error) {
 	var t models.ArticleAudioTranscription
@@ -387,6 +425,43 @@ func (r *Repository) GetArticleContextByTranscriptionID(transcriptionID int64) (
 		return "", 0, "", fmt.Errorf("querying article context by transcription_id=%d: %w", transcriptionID, err)
 	}
 	return articleURL, articleSourceID, cleanedText, nil
+}
+
+func (r *Repository) ListTranscriptionsPendingExtraction() ([]models.ArticleAudioTranscription, error) {
+	rows, err := r.db.Query(
+		`SELECT tr.transcription_id, tr.audio_source_id, tr.provider, tr.language, tr.http_status, tr.response_json, tr.response_byte_size, tr.error_message, tr.transcribed_at
+		 FROM audio_transcriptions tr
+		 JOIN audio_sources au ON au.audio_source_id = tr.audio_source_id
+		 JOIN article_fetches f ON f.article_fetch_id = au.article_fetch_id
+		 WHERE NOT EXISTS (
+			 SELECT 1 FROM spot_mentions sm WHERE sm.transcription_id = tr.transcription_id
+		 ) AND NOT EXISTS (
+			 SELECT 1 FROM article_presenters ap WHERE ap.article_source_id = f.article_source_id
+		 )
+		 ORDER BY tr.transcription_id ASC`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying pending transcriptions: %w", err)
+	}
+	defer rows.Close()
+
+	var results []models.ArticleAudioTranscription
+	for rows.Next() {
+		var t models.ArticleAudioTranscription
+		var errMsg sql.NullString
+		err := rows.Scan(&t.TranscriptionID, &t.AudioSourceID, &t.Provider, &t.Language, &t.HTTPStatus, &t.ResponseJSON, &t.ResponseByteSize, &errMsg, &t.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scanning pending transcription: %w", err)
+		}
+		if errMsg.Valid {
+			t.ErrorMessage = &errMsg.String
+		}
+		results = append(results, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating pending transcriptions: %w", err)
+	}
+	return results, nil
 }
 
 type SpotMentionForGeocode struct {

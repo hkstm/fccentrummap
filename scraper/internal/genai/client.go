@@ -36,7 +36,7 @@ func NewClientWithEndpoint(apiKey, model, endpointBase string) *Client {
 		apiKey:  strings.TrimSpace(apiKey),
 		model:   strings.TrimSpace(model),
 		baseURL: strings.TrimSpace(endpointBase),
-		timeout: 60 * time.Second,
+		timeout: 180 * time.Second,
 		backend: gogenai.BackendGeminiAPI,
 	}
 }
@@ -46,7 +46,7 @@ func (c *Client) Validate() error {
 		return fmt.Errorf("Gemini API key is not set; provide --gemini-api-key or set GEMINI_API_KEY/GOOGLE_API_KEY before running extract-spots-dry-run")
 	}
 	if c.model == "" {
-		return fmt.Errorf("Gemma model is not configured; set --gemma-model or GEMMA_MODEL before running extract-spots-dry-run")
+		return fmt.Errorf("Gemma model is not configured; set --model or MODEL before running extract-spots-dry-run")
 	}
 	return nil
 }
