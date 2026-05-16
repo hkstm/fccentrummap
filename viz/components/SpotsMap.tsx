@@ -52,7 +52,7 @@ function SpotsLayer() {
         }));
 
         setPresenters(uniquePresenters);
-        setSelectedPresenters(new Set(uniquePresenters.length > 0 ? [uniquePresenters[0]] : []));
+        setSelectedPresenters(new Set(uniquePresenters));
         setSpots(resolved);
         setError(null);
       } catch (e) {
@@ -150,7 +150,7 @@ export function SpotsMap() {
               height={67}
             />
           </a>
-          <div className="justify-self-end self-start mt-1">
+          <div className="hidden justify-self-end self-start mt-1 sm:block">
             <a href="https://hkstm.dev" target="_blank" rel="noopener noreferrer" className="!text-white hover:!text-[#e30613] underline decoration-transparent hover:decoration-[#e30613] underline-offset-4 text-[18px] font-bold uppercase [font-family:'Garage_Gothic',Inter,'Helvetica_Neue',helvetica,arial,sans-serif] transition-colors duration-300">
               created by hkstm.dev
             </a>
@@ -168,6 +168,9 @@ export function SpotsMap() {
             mapId={mapId}
             renderingType="VECTOR"
             mapTypeControl={false}
+            streetViewControl={false}
+            cameraControl={false}
+            rotateControl={false}
             defaultCenter={{ lat: 52.3676, lng: 4.9041 }}
             defaultZoom={12}
             gestureHandling="greedy"
