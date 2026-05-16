@@ -4,6 +4,7 @@ import { APIProvider, AdvancedMarker, InfoWindow, Map, useMap } from '@vis.gl/re
 import { useEffect, useMemo, useState } from 'react';
 import { buildPresenterColorMap } from '@/lib/color';
 import { loadSpotsData } from '@/lib/data';
+import { buildMapShareSearch, getInitialMapShareState, getSpotKey } from '@/lib/share-state';
 import { SpotWithPosition } from '@/lib/types';
 import { AmsterdamXMarker } from './AmsterdamXMarker';
 import { PresenterFilterPanel } from './PresenterFilterPanel';
@@ -51,8 +52,13 @@ function SpotsLayer() {
           position: { lat: spot.latitude, lng: spot.longitude },
         }));
 
+        const initialShareState = typeof window === 'undefined'
+          ? { selectedPresenters: new Set(uniquePresenters), activeSpotKey: null }
+          : getInitialMapShareState(window.location.search, uniquePresenters, resolved);
+
         setPresenters(uniquePresenters);
-        setSelectedPresenters(new Set(uniquePresenters));
+        setSelectedPresenters(initialShareState.selectedPresenters);
+        setActiveSpotKey(initialShareState.activeSpotKey);
         setSpots(resolved);
         setError(null);
       } catch (e) {
@@ -68,10 +74,26 @@ function SpotsLayer() {
     () => spots.filter((spot) => selectedPresenters.has(spot.presenterName)),
     [spots, selectedPresenters],
   );
+  useEffect(() => {
+    if (!activeSpotKey) return;
+    const stillVisible = filteredSpots.some((spot) => getSpotKey(spot) === activeSpotKey);
+    if (!stillVisible) setActiveSpotKey(null);
+  }, [activeSpotKey, filteredSpots]);
+
   const activeSpot = useMemo(
-    () => filteredSpots.find((spot) => `${spot.placeId}-${spot.presenterName}` === activeSpotKey) ?? null,
+    () => filteredSpots.find((spot) => getSpotKey(spot) === activeSpotKey) ?? null,
     [filteredSpots, activeSpotKey],
   );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || presenters.length === 0) return;
+
+    const nextSearch = buildMapShareSearch(window.location.search, presenters, selectedPresenters, activeSpotKey);
+    const currentSearch = window.location.search;
+    if (nextSearch === currentSearch) return;
+
+    window.history.replaceState({}, '', `${window.location.pathname}${nextSearch}${window.location.hash}`);
+  }, [activeSpotKey, presenters, selectedPresenters]);
 
   if (error) {
     return <div className="errorState" role="alert">{error}</div>;
@@ -95,7 +117,7 @@ function SpotsLayer() {
       />
 
       {filteredSpots.map((spot) => {
-        const markerKey = `${spot.placeId}-${spot.presenterName}`;
+        const markerKey = getSpotKey(spot);
         return (
           <AdvancedMarker
             key={markerKey}
