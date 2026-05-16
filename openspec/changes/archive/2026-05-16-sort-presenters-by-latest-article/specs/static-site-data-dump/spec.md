@@ -1,21 +1,4 @@
-# static-site-data-dump Specification
-
-## Purpose
-TBD - created by archiving change export-scraping-data-to-json. Update Purpose after archive.
-## Requirements
-### Requirement: Static data dump document for site consumption
-The system SHALL generate a single JSON document containing top-level `spots` and `presenters` collections for static site consumption.
-
-#### Scenario: Export produces top-level collections
-- **WHEN** the user runs the export command against a valid SQLite dataset
-- **THEN** the output file MUST contain a JSON object with `spots` and `presenters` keys
-
-### Requirement: Spot records include required frontend fields
-Each entry in `spots` MUST include `placeId`, `spotName`, `presenterName`, and `youtubeLink`.
-
-#### Scenario: Spot entry contains required fields
-- **WHEN** a spot exists in the source dataset
-- **THEN** the exported spot record MUST include `placeId`, `spotName`, `presenterName`, and `youtubeLink`
+## MODIFIED Requirements
 
 ### Requirement: Presenter list is exported from database values as-is
 The `presenters` collection SHALL contain presenter names taken directly from stored database values without normalization or canonicalization in v1, and SHALL order presenters by each presenter's latest associated article publication time descending without adding publication-time fields to the exported presenter objects.
@@ -36,4 +19,3 @@ The `presenters` collection SHALL contain presenter names taken directly from st
 #### Scenario: Missing publication time blocks export
 - **WHEN** an exported presenter is associated with an article that has no stored publication time
 - **THEN** the export SHALL fail with an actionable error instead of silently falling back to alphabetical ordering
-

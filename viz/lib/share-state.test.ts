@@ -33,6 +33,25 @@ describe('map share state', () => {
     expect(state.activeSpotKey).toBeNull();
   });
 
+  it('uses provided default presenters when no filter query is present', () => {
+    const state = getInitialMapShareState('', presenters, spots, new Set(['Ray Fuego', 'Sef']));
+
+    expect([...state.selectedPresenters]).toEqual(['Ray Fuego', 'Sef']);
+    expect(state.activeSpotKey).toBeNull();
+  });
+
+  it('omits presenter filters from share URLs when the default presenters are selected', () => {
+    const search = buildMapShareSearch('?foo=bar', presenters, new Set(['Ray Fuego', 'Sef']), null, new Set(['Ray Fuego', 'Sef']));
+
+    expect(search).toBe('?foo=bar');
+  });
+
+  it('keeps all selected presenters shareable when default presenters are a subset', () => {
+    const search = buildMapShareSearch('?foo=bar', presenters, new Set(presenters), null, new Set(['Ray Fuego', 'Sef']));
+
+    expect(search).toBe('?presenters=Ray+Fuego%2CSef%2CAkwasi&foo=bar');
+  });
+
   it('restores preselected filters from the URL', () => {
     const state = getInitialMapShareState('?presenters=Sef%2CAkwasi', presenters, spots);
 
