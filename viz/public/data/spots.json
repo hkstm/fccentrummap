@@ -961,16 +961,6 @@
       "articleUrl": "https://fccentrum.nl/story/de-spots-van-kiki-bosman/"
     },
     {
-      "spotId": "4:21",
-      "placeId": "ChIJVzxSOgAJxkcR7id9ieHmR6o",
-      "spotName": "Dumplings",
-      "presenterName": "Mascha Feoktistova",
-      "latitude": 52.3750687,
-      "longitude": 4.8916091999999995,
-      "youtubeLink": "https://youtu.be/R_bjN8GHCeQ?t=21",
-      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-beautygloss-mascha-feoktistova-in-amsterdam/"
-    },
-    {
       "spotId": "26:113",
       "placeId": "ChIJW2m5p5UJxkcRRApNTk9pA2M",
       "spotName": "Zeedijk",
@@ -979,6 +969,16 @@
       "longitude": 4.9005618,
       "youtubeLink": "https://youtu.be/W4aQRe0Y8sI?t=242",
       "articleUrl": "https://fccentrum.nl/story/de-spots-van-nana-asare-dit-is-een-og-foodspot/"
+    },
+    {
+      "spotId": "2:17",
+      "placeId": "ChIJWTOQdOoJxkcRbp9D3FnPSoA",
+      "spotName": "Ministry",
+      "presenterName": "Edsilia Rombley",
+      "latitude": 52.3666158,
+      "longitude": 4.8896954,
+      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=204",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
     },
     {
       "spotId": "10:181",
@@ -1019,16 +1019,6 @@
       "longitude": 4.885735599999999,
       "youtubeLink": "https://youtu.be/1CXGLBZWR1A?t=521",
       "articleUrl": "https://fccentrum.nl/story/de-spots-van-freek-van-noortwijk/"
-    },
-    {
-      "spotId": "2:17",
-      "placeId": "ChIJXxynOc4JxkcRcKCN8lwx4g8",
-      "spotName": "Ministry",
-      "presenterName": "Edsilia Rombley",
-      "latitude": 52.3812469,
-      "longitude": 4.8852132,
-      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=198",
-      "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
     },
     {
       "spotId": "40:50",
@@ -1159,6 +1149,16 @@
       "longitude": 4.8990357,
       "youtubeLink": "https://youtu.be/h5Ni-cpTLBU?t=279",
       "articleUrl": "https://fccentrum.nl/story/de-favoriete-foodspots-van-sterrenchef-dennis-huwae-en-roger-bloem/"
+    },
+    {
+      "spotId": "4:21",
+      "placeId": "ChIJa8O4oVYJxkcRTEU_vc5PE8c",
+      "spotName": "Dumplings",
+      "presenterName": "Mascha Feoktistova",
+      "latitude": 52.385377,
+      "longitude": 4.881098,
+      "youtubeLink": "https://youtu.be/R_bjN8GHCeQ?t=21",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-beautygloss-mascha-feoktistova-in-amsterdam/"
     },
     {
       "spotId": "32:82",

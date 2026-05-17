@@ -2,6 +2,8 @@ package spotcorrections
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net/url"
@@ -112,11 +114,69 @@ func (s *Service) SaveCorrection(ctx context.Context, input CorrectionInput) (*m
 	return s.repo.GetSpotCorrectionTarget(spotID)
 }
 
-func resolvePlaceCorrectionInput(ctx context.Context, lookup PlaceIDLookup, value string) (*geocoder.Coordinates, error) {
-	if resolver, ok := lookup.(PlaceInputResolver); ok {
-		return resolver.ResolvePlaceInput(ctx, value)
+func resolvePlaceCorrectionInput(ctx context.Context, lookup PlaceIDLookup, url string) (*geocoder.Coordinates, error) {
+	// 1. Automatically parse and trim the token out of the URL
+	token := ExtractTokenFromURL(url)
+	if token == "" {
+		return nil, fmt.Errorf("error: Could not find a valid location token" +
+			" inside the provided URL")
 	}
-	return lookup.LookupPlaceIDCoordinates(ctx, value)
+
+	// 2. Decode the token purely offline
+	placeID, err := DecodeUrlTokenToPlaceID(token)
+	if err != nil {
+		return nil, fmt.Errorf("Decoding error: %v\n", err)
+	}
+
+	return lookup.LookupPlaceIDCoordinates(ctx, placeID)
+}
+
+// DecodeUrlTokenToPlaceID takes the hex token from the URL and converts it to a Place ID offline.
+func DecodeUrlTokenToPlaceID(token string) (string, error) {
+	parts := strings.Split(token, ":")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("invalid token format")
+	}
+
+	hex1 := strings.TrimPrefix(parts[0], "0x")
+	hex2 := strings.TrimPrefix(parts[1], "0x")
+
+	var machineID, featureID uint64
+	if _, err := fmt.Sscanf(hex1, "%x", &machineID); err != nil {
+		return "", err
+	}
+	if _, err := fmt.Sscanf(hex2, "%x", &featureID); err != nil {
+		return "", err
+	}
+
+	// A valid Place ID is exactly 20 bytes long
+	buf := make([]byte, 20)
+
+	// --- Outer Wrapper ---
+	buf[0] = 0x0A // Field 1, Wire Type 2 (Length-delimited)
+	buf[1] = 0x12 // Length: 18 bytes
+
+	// --- Inner Payload ---
+	buf[2] = 0x09 // Field 1, Wire Type 1 (Fixed64)
+	binary.LittleEndian.PutUint64(buf[3:11], machineID)
+
+	buf[11] = 0x11 // Field 2, Wire Type 1 (Fixed64)
+	binary.LittleEndian.PutUint64(buf[12:20], featureID)
+
+	// Encode using URL-Safe Base64 with strictly NO padding characters ('=')
+	// The prefix "ChI" naturally emerges from encoding the 0x0A, 0x12, 0x09 bytes.
+	placeID := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(buf)
+
+	return placeID, nil
+}
+
+func ExtractTokenFromURL(url string) string {
+	re := regexp.MustCompile(`1s(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)`)
+	matches := re.FindStringSubmatch(url)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
 }
 
 func ParseTimestampedYouTubeURL(raw string) (int64, error) {
