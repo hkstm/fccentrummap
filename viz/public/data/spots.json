@@ -1181,6 +1181,16 @@
       "articleUrl": "https://fccentrum.nl/story/de-spots-van-dai-carter/"
     },
     {
+      "spotId": "2:20",
+      "placeId": "ChIJaSSxveQJxkcR-CFnYX8MG0g",
+      "spotName": "DEMP Music Studio",
+      "presenterName": "Edsilia Rombley",
+      "latitude": 52.358063599999994,
+      "longitude": 4.8742068,
+      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=546",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
+    },
+    {
       "spotId": "40:51",
       "placeId": "ChIJb6IeerkJxkcR5i0AgoMG0Ic",
       "spotName": "Thais eethuis O-Cha",
@@ -1239,16 +1249,6 @@
       "longitude": 4.9046495,
       "youtubeLink": "https://youtu.be/C_jgXKjII8I?t=39",
       "articleUrl": "https://fccentrum.nl/story/de-spots-van-sara-shawkat/"
-    },
-    {
-      "spotId": "2:20",
-      "placeId": "ChIJd_L9ReMJxkcR24lcvjSQ2YE",
-      "spotName": "DEMP Music Studio",
-      "presenterName": "Edsilia Rombley",
-      "latitude": 52.3576074,
-      "longitude": 4.871846199999999,
-      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=547",
-      "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
     },
     {
       "spotId": "43:34",
