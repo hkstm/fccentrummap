@@ -180,11 +180,10 @@ button:focus-visible, input:focus-visible {
 
 
 /*
- * AdvancedMarker hit-testing is rectangular by default. The X icon has a lot of
- * transparent pixels around/between the painted bars, so adjacent marker boxes can
- * steal hover/clicks even when the visible X shapes do not overlap. Disable
- * pointer targeting on the marker boxes and re-enable it only on the painted SVG
- * rects so the hit area follows the visible marker.
+ * AdvancedMarker hit-testing is rectangular by default. The Google wrapper can
+ * steal hover/clicks from nearby markers, so keep the wrapper non-interactive and
+ * use our own viewBox-aware hitbox over the rendered X instead of the full 44x44
+ * SVG box.
  */
 gmp-advanced-marker:has(.markerButton),
 gmp-advanced-marker:has(.markerButton) > div {
@@ -199,9 +198,20 @@ gmp-advanced-marker:has(.markerButton) > div {
   width: 44px;
   height: 44px;
   padding: 0;
+  position: relative;
   pointer-events: none;
   transform-origin: center;
   transition: transform 120ms ease;
+}
+.markerHitbox {
+  position: absolute;
+  left: 10px;
+  top: 9px;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  pointer-events: auto;
 }
 .markerButtonSelected {
   transform: scale(1.16);
@@ -224,10 +234,7 @@ gmp-advanced-marker:has(.markerButton) > div {
   filter: drop-shadow(0 2px 3px rgba(0,0,0,.2));
   pointer-events: none;
 }
-.markerButton svg rect {
-  pointer-events: visiblePainted;
-  cursor: pointer;
-}
+.markerButton svg rect,
 .markerButton svg .markerHalo {
   pointer-events: none;
 }

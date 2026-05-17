@@ -12,6 +12,7 @@ export function AmsterdamXMarker({ color, label, selected = false }: Props) {
       aria-label={`Open spot details: ${label}`}
       title={label}
     >
+      <span className="markerHitbox" aria-hidden="true" />
       <svg viewBox="0 0 60 90" aria-hidden="true">
         <g transform="translate(30,42)">
           {selected && (
