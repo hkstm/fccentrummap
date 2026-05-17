@@ -72,11 +72,14 @@ func TestExportDataIncludesRequiredFields(t *testing.T) {
 		t.Fatalf("expected 1 spot, got %d", len(data.Spots))
 	}
 	spot := data.Spots[0]
-	if spot.PlaceID == "" || spot.SpotName == "" || spot.PresenterName == "" || spot.YouTubeLink == "" || spot.ArticleURL == "" {
+	if spot.SpotID == "" || spot.PlaceID == "" || spot.SpotName == "" || spot.PresenterName == "" || spot.YouTubeLink == "" || spot.ArticleURL == "" {
 		t.Fatalf("expected required spot fields, got %+v", spot)
 	}
 	if spot.Latitude != 52.0 || spot.Longitude != 4.0 {
 		t.Fatalf("expected coordinates in export, got lat=%v lng=%v", spot.Latitude, spot.Longitude)
+	}
+	if spot.SpotID != "1:1" {
+		t.Fatalf("expected stable spotId 1:1, got %s", spot.SpotID)
 	}
 	if spot.YouTubeLink != "https://youtu.be/abc?t=15" {
 		t.Fatalf("expected timestamped youtube link, got %s", spot.YouTubeLink)
@@ -86,6 +89,87 @@ func TestExportDataIncludesRequiredFields(t *testing.T) {
 	}
 	if len(data.Presenters) != 1 || data.Presenters[0].PresenterName != "Ray Fuego" {
 		t.Fatalf("unexpected presenters: %+v", data.Presenters)
+	}
+}
+
+func TestExportDataAppliesCorrectionsAndKeepsStableSpotID(t *testing.T) {
+	repo := newTestRepo(t)
+	seedExportFixture(t, repo)
+
+	before, err := repo.ExportData()
+	if err != nil {
+		t.Fatalf("ExportData before: %v", err)
+	}
+	spotID := before.Spots[0].SpotID
+	name := "Corrected Stopera"
+	placeID := "corrected_place"
+	lat := 52.5
+	lng := 4.5
+	ts := int64(75)
+	if err := repo.UpsertSpotCorrection(models.SpotCorrection{SpotID: spotID, SpotName: &name, PlaceID: &placeID, Latitude: &lat, Longitude: &lng, YouTubeTimestampSeconds: &ts}); err != nil {
+		t.Fatalf("UpsertSpotCorrection: %v", err)
+	}
+
+	after, err := repo.ExportData()
+	if err != nil {
+		t.Fatalf("ExportData after: %v", err)
+	}
+	spot := after.Spots[0]
+	if spot.SpotID != spotID {
+		t.Fatalf("spotId changed after corrections: before=%s after=%s", spotID, spot.SpotID)
+	}
+	if spot.SpotName != name || spot.PlaceID != placeID || spot.Latitude != lat || spot.Longitude != lng || spot.YouTubeLink != "https://youtu.be/abc?t=75" {
+		t.Fatalf("corrections not applied: %+v", spot)
+	}
+}
+
+func TestExportDataPartialCorrectionPreservesSourceValues(t *testing.T) {
+	repo := newTestRepo(t)
+	seedExportFixture(t, repo)
+	name := "Only Name Corrected"
+	if err := repo.UpsertSpotCorrection(models.SpotCorrection{SpotID: "1:1", SpotName: &name}); err != nil {
+		t.Fatalf("UpsertSpotCorrection: %v", err)
+	}
+	data, err := repo.ExportData()
+	if err != nil {
+		t.Fatalf("ExportData: %v", err)
+	}
+	spot := data.Spots[0]
+	if spot.SpotName != name || spot.PlaceID != "place_1" || spot.Latitude != 52.0 || spot.Longitude != 4.0 || spot.YouTubeLink != "https://youtu.be/abc?t=15" {
+		t.Fatalf("source values not preserved for partial correction: %+v", spot)
+	}
+}
+
+func TestExportDataSkipsHiddenCorrection(t *testing.T) {
+	repo := newTestRepo(t)
+	seedExportFixture(t, repo)
+	if err := repo.UpsertSpotCorrection(models.SpotCorrection{SpotID: "1:1", Hidden: true}); err != nil {
+		t.Fatalf("UpsertSpotCorrection: %v", err)
+	}
+	data, err := repo.ExportData()
+	if err != nil {
+		t.Fatalf("ExportData: %v", err)
+	}
+	if len(data.Spots) != 0 {
+		t.Fatalf("expected hidden spot to be omitted, got %+v", data.Spots)
+	}
+	if len(data.Presenters) != 0 {
+		t.Fatalf("expected presenter with only hidden spots to be omitted, got %+v", data.Presenters)
+	}
+}
+
+func TestUpsertSpotCorrectionRejectsInvalidExportInvariants(t *testing.T) {
+	repo := newTestRepo(t)
+	placeID := "missing_coords"
+	err := repo.UpsertSpotCorrection(models.SpotCorrection{SpotID: "1:1", PlaceID: &placeID})
+	if err == nil || !strings.Contains(err.Error(), "place_id and coordinates") {
+		t.Fatalf("expected actionable place/coordinates error, got %v", err)
+	}
+
+	negativeTS := int64(-1)
+	err = repo.UpsertSpotCorrection(models.SpotCorrection{SpotID: "1:1", YouTubeTimestampSeconds: &negativeTS})
+	if err == nil || !strings.Contains(err.Error(), "youtube_timestamp_seconds") {
+		t.Fatalf("expected actionable timestamp error, got %v", err)
 	}
 }
 

@@ -11,11 +11,15 @@ The system SHALL generate a single JSON document containing top-level `spots` an
 - **THEN** the output file MUST contain a JSON object with `spots` and `presenters` keys
 
 ### Requirement: Spot records include required frontend fields
-Each entry in `spots` MUST include `placeId`, `spotName`, `presenterName`, and `youtubeLink`.
+Each entry in `spots` MUST include `spotId`, `placeId`, `spotName`, `presenterName`, and `youtubeLink`. `spotId` SHALL be a stable identifier suitable for spot-specific links and maintainer correction workflows.
 
 #### Scenario: Spot entry contains required fields
 - **WHEN** a spot exists in the source dataset
-- **THEN** the exported spot record MUST include `placeId`, `spotName`, `presenterName`, and `youtubeLink`
+- **THEN** the exported spot record MUST include `spotId`, `placeId`, `spotName`, `presenterName`, and `youtubeLink`
+
+#### Scenario: Spot identifier remains stable across corrections
+- **WHEN** a spot has corrected `spotName`, `placeId`, coordinates, or timestamp values
+- **THEN** the exported `spotId` SHALL remain the same stable identifier for that source spot
 
 ### Requirement: Presenter list is exported from database values as-is
 The `presenters` collection SHALL contain presenter names taken directly from stored database values without normalization or canonicalization in v1, and SHALL order presenters by each presenter's latest associated article publication time descending without adding publication-time fields to the exported presenter objects.

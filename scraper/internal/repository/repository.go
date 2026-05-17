@@ -139,11 +139,30 @@ func (r *Repository) InitSchema() error {
 		PRIMARY KEY (article_source_id, spot_google_geocode_id)
 	);
 
+	CREATE TABLE IF NOT EXISTS spot_corrections (
+		spot_id TEXT PRIMARY KEY CHECK (trim(spot_id) <> ''),
+		spot_name TEXT,
+		place_id TEXT,
+		latitude REAL,
+		longitude REAL,
+		youtube_timestamp_seconds INTEGER CHECK (youtube_timestamp_seconds IS NULL OR youtube_timestamp_seconds >= 0),
+		hidden INTEGER NOT NULL DEFAULT 0 CHECK (hidden IN (0, 1)),
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		CHECK (
+			((place_id IS NULL OR trim(place_id) = '') AND latitude IS NULL AND longitude IS NULL)
+			OR (place_id IS NOT NULL AND trim(place_id) <> '' AND latitude IS NOT NULL AND longitude IS NOT NULL)
+		)
+	);
+
 	`
 	if _, err := r.db.Exec(schema); err != nil {
 		return fmt.Errorf("initializing schema: %w", err)
 	}
 	if err := r.ensureArticleSourcePublishedAtColumn(); err != nil {
+		return err
+	}
+	if err := r.ensureSpotCorrectionsHiddenColumn(); err != nil {
 		return err
 	}
 	if err := r.backfillArticleSourcePublishedAt(); err != nil {
@@ -181,6 +200,38 @@ func (r *Repository) ensureArticleSourcePublishedAtColumn() error {
 	}
 	if _, err := r.db.Exec(`ALTER TABLE article_sources ADD COLUMN published_at TIMESTAMP`); err != nil {
 		return fmt.Errorf("adding article_sources.published_at: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) ensureSpotCorrectionsHiddenColumn() error {
+	rows, err := r.db.Query(`PRAGMA table_info(spot_corrections)`)
+	if err != nil {
+		return fmt.Errorf("inspecting spot_corrections schema: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			cid       int
+			name      string
+			colType   string
+			notNull   int
+			defaultV  any
+			primaryKY int
+		)
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &defaultV, &primaryKY); err != nil {
+			return fmt.Errorf("scanning spot_corrections schema: %w", err)
+		}
+		if name == "hidden" {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterating spot_corrections schema: %w", err)
+	}
+	if _, err := r.db.Exec(`ALTER TABLE spot_corrections ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0 CHECK (hidden IN (0, 1))`); err != nil {
+		return fmt.Errorf("adding spot_corrections.hidden: %w", err)
 	}
 	return nil
 }
@@ -877,9 +928,216 @@ func (r *Repository) ListArticleFetches() ([]models.ArticleFetch, error) {
 	return out, nil
 }
 
+func StableSpotID(articleSourceID, spotMentionID int64) string {
+	return fmt.Sprintf("%d:%d", articleSourceID, spotMentionID)
+}
+
+func (r *Repository) GetSpotCorrection(spotID string) (*models.SpotCorrection, error) {
+	var c models.SpotCorrection
+	var spotName, placeID sql.NullString
+	var lat, lng sql.NullFloat64
+	var ts sql.NullInt64
+	var hidden sql.NullBool
+	err := r.db.QueryRow(
+		`SELECT spot_id, spot_name, place_id, latitude, longitude, youtube_timestamp_seconds, hidden, created_at, updated_at
+		 FROM spot_corrections
+		 WHERE spot_id = ?`,
+		strings.TrimSpace(spotID),
+	).Scan(&c.SpotID, &spotName, &placeID, &lat, &lng, &ts, &hidden, &c.CreatedAt, &c.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("querying spot correction spot_id=%s: %w", spotID, err)
+	}
+	if spotName.Valid {
+		c.SpotName = &spotName.String
+	}
+	if placeID.Valid {
+		c.PlaceID = &placeID.String
+	}
+	if lat.Valid {
+		c.Latitude = &lat.Float64
+	}
+	if lng.Valid {
+		c.Longitude = &lng.Float64
+	}
+	if ts.Valid {
+		c.YouTubeTimestampSeconds = &ts.Int64
+	}
+	if hidden.Valid {
+		c.Hidden = hidden.Bool
+	}
+	return &c, nil
+}
+
+func (r *Repository) UpsertSpotCorrection(c models.SpotCorrection) error {
+	spotID := strings.TrimSpace(c.SpotID)
+	if spotID == "" {
+		return fmt.Errorf("spot correction spot_id is required")
+	}
+	if c.YouTubeTimestampSeconds != nil && *c.YouTubeTimestampSeconds < 0 {
+		return fmt.Errorf("spot correction youtube_timestamp_seconds must be >= 0")
+	}
+	if (c.Latitude == nil) != (c.Longitude == nil) {
+		return fmt.Errorf("spot correction latitude and longitude must be provided together")
+	}
+	hasPlace := c.PlaceID != nil && strings.TrimSpace(*c.PlaceID) != ""
+	hasCoords := c.Latitude != nil && c.Longitude != nil
+	if hasPlace != hasCoords {
+		return fmt.Errorf("spot correction place_id and coordinates must be provided together")
+	}
+	_, err := r.db.Exec(
+		`INSERT INTO spot_corrections (spot_id, spot_name, place_id, latitude, longitude, youtube_timestamp_seconds, hidden)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(spot_id) DO UPDATE SET
+			spot_name = excluded.spot_name,
+			place_id = excluded.place_id,
+			latitude = excluded.latitude,
+			longitude = excluded.longitude,
+			youtube_timestamp_seconds = excluded.youtube_timestamp_seconds,
+			hidden = excluded.hidden,
+			updated_at = CURRENT_TIMESTAMP`,
+		spotID,
+		c.SpotName,
+		c.PlaceID,
+		c.Latitude,
+		c.Longitude,
+		c.YouTubeTimestampSeconds,
+		c.Hidden,
+	)
+	if err != nil {
+		return fmt.Errorf("upserting spot correction spot_id=%s: %w", spotID, err)
+	}
+	return nil
+}
+
+func (r *Repository) GetSpotCorrectionTarget(spotID string) (*models.SpotCorrectionTarget, error) {
+	row := r.db.QueryRow(`
+		SELECT
+			CAST(asp.article_source_id AS TEXT) || ':' || CAST(sm.spot_mention_id AS TEXT),
+			COALESCE(sm.place, ''),
+			COALESCE(sgg.google_place_id, ''),
+			sgg.latitude,
+			sgg.longitude,
+			COALESCE(aus.youtube_url, ''),
+			COALESCE(s.url, ''),
+			NULLIF(p.presenter_name, ''),
+			sm.refined_sentence_start_timestamp,
+			sm.original_sentence_start_timestamp,
+			sm.sentence_start_timestamp,
+			sc.spot_name,
+			sc.place_id,
+			sc.latitude,
+			sc.longitude,
+			sc.youtube_timestamp_seconds,
+			sc.hidden,
+			sc.created_at,
+			sc.updated_at
+		FROM article_spots asp
+		JOIN spot_google_geocodes sgg ON sgg.spot_google_geocode_id = asp.spot_google_geocode_id
+		JOIN spot_mentions sm ON sm.spot_mention_id = sgg.spot_mention_id
+		JOIN audio_transcriptions tr ON tr.transcription_id = sm.transcription_id
+		JOIN audio_sources aus ON aus.audio_source_id = tr.audio_source_id
+		JOIN article_sources s ON s.article_source_id = asp.article_source_id
+		LEFT JOIN article_presenters ap ON ap.article_source_id = asp.article_source_id
+		LEFT JOIN presenters p ON p.presenter_id = ap.presenter_id
+		LEFT JOIN spot_corrections sc ON sc.spot_id = CAST(asp.article_source_id AS TEXT) || ':' || CAST(sm.spot_mention_id AS TEXT)
+		WHERE CAST(asp.article_source_id AS TEXT) || ':' || CAST(sm.spot_mention_id AS TEXT) = ?`,
+		strings.TrimSpace(spotID),
+	)
+
+	var target models.SpotCorrectionTarget
+	var presenterName sql.NullString
+	var refinedTS, originalTS, sentenceStartTS sql.NullFloat64
+	var cSpotName, cPlaceID sql.NullString
+	var cLat, cLng sql.NullFloat64
+	var cTimestamp sql.NullInt64
+	var cHidden sql.NullBool
+	var cCreated, cUpdated sql.NullTime
+	if err := row.Scan(
+		&target.SpotID,
+		&target.SourceSpotName,
+		&target.SourcePlaceID,
+		&target.SourceLatitude,
+		&target.SourceLongitude,
+		&target.SourceYouTubeLink,
+		&target.ArticleURL,
+		&presenterName,
+		&refinedTS,
+		&originalTS,
+		&sentenceStartTS,
+		&cSpotName,
+		&cPlaceID,
+		&cLat,
+		&cLng,
+		&cTimestamp,
+		&cHidden,
+		&cCreated,
+		&cUpdated,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("querying spot correction target spot_id=%s: %w", spotID, err)
+	}
+	if presenterName.Valid {
+		target.PresenterName = presenterName.String
+	}
+	target.SourceYouTubeTimestampSecs = pickedTimestampSeconds(refinedTS, originalTS, sentenceStartTS)
+	target.EffectiveSpotName = target.SourceSpotName
+	target.EffectivePlaceID = target.SourcePlaceID
+	target.EffectiveLatitude = target.SourceLatitude
+	target.EffectiveLongitude = target.SourceLongitude
+	target.EffectiveYouTubeTimestampSecs = target.SourceYouTubeTimestampSecs
+	target.EffectiveYouTubeLink = withYouTubeTimestamp(target.SourceYouTubeLink, refinedTS, originalTS, sentenceStartTS)
+
+	if cSpotName.Valid || cPlaceID.Valid || cLat.Valid || cLng.Valid || cTimestamp.Valid || cHidden.Valid {
+		correction := &models.SpotCorrection{SpotID: target.SpotID}
+		if cSpotName.Valid {
+			correction.SpotName = &cSpotName.String
+			target.EffectiveSpotName = cSpotName.String
+		}
+		if cPlaceID.Valid {
+			correction.PlaceID = &cPlaceID.String
+			if strings.TrimSpace(cPlaceID.String) != "" {
+				target.EffectivePlaceID = cPlaceID.String
+			}
+		}
+		if cLat.Valid {
+			correction.Latitude = &cLat.Float64
+			target.EffectiveLatitude = cLat.Float64
+		}
+		if cLng.Valid {
+			correction.Longitude = &cLng.Float64
+			target.EffectiveLongitude = cLng.Float64
+		}
+		if cTimestamp.Valid {
+			correction.YouTubeTimestampSeconds = &cTimestamp.Int64
+			target.EffectiveYouTubeTimestampSecs = &cTimestamp.Int64
+			if cTimestamp.Int64 >= 0 {
+				target.EffectiveYouTubeLink = withYouTubeTimestampSeconds(target.SourceYouTubeLink, cTimestamp.Int64)
+			}
+		}
+		if cHidden.Valid {
+			correction.Hidden = cHidden.Bool
+		}
+		if cCreated.Valid {
+			correction.CreatedAt = cCreated.Time
+		}
+		if cUpdated.Valid {
+			correction.UpdatedAt = cUpdated.Time
+		}
+		target.Correction = correction
+	}
+
+	return &target, nil
+}
+
 func (r *Repository) ExportData() (*models.ExportData, error) {
 	rows, err := r.db.Query(`
 		SELECT
+			CAST(asp.article_source_id AS TEXT) || ':' || CAST(sm.spot_mention_id AS TEXT),
 			COALESCE(sgg.google_place_id, ''),
 			COALESCE(sm.place, ''),
 			NULLIF(p.presenter_name, ''),
@@ -890,7 +1148,12 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 			s.published_at,
 			sm.refined_sentence_start_timestamp,
 			sm.original_sentence_start_timestamp,
-			sm.sentence_start_timestamp
+			sm.sentence_start_timestamp,
+			sc.spot_name,
+			sc.place_id,
+			sc.latitude,
+			sc.longitude,
+			sc.youtube_timestamp_seconds
 		FROM article_spots asp
 		JOIN spot_google_geocodes sgg ON sgg.spot_google_geocode_id = asp.spot_google_geocode_id
 		JOIN spot_mentions sm ON sm.spot_mention_id = sgg.spot_mention_id
@@ -899,6 +1162,8 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 		JOIN article_sources s ON s.article_source_id = asp.article_source_id
 		LEFT JOIN article_presenters ap ON ap.article_source_id = asp.article_source_id
 		LEFT JOIN presenters p ON p.presenter_id = ap.presenter_id
+		LEFT JOIN spot_corrections sc ON sc.spot_id = CAST(asp.article_source_id AS TEXT) || ':' || CAST(sm.spot_mention_id AS TEXT)
+		WHERE COALESCE(sc.hidden, 0) = 0
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("querying export data: %w", err)
@@ -919,9 +1184,14 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 			refinedTS        sql.NullFloat64
 			originalTS       sql.NullFloat64
 			sentenceStartTS  sql.NullFloat64
+			cSpotName        sql.NullString
+			cPlaceID         sql.NullString
+			cLat             sql.NullFloat64
+			cLng             sql.NullFloat64
+			cTimestamp       sql.NullInt64
 		)
 		var presenterName sql.NullString
-		if err := rows.Scan(&spot.PlaceID, &spot.SpotName, &presenterName, &spot.Latitude, &spot.Longitude, &rawYouTubeLink, &spot.ArticleURL, &publishedAtValue, &refinedTS, &originalTS, &sentenceStartTS); err != nil {
+		if err := rows.Scan(&spot.SpotID, &spot.PlaceID, &spot.SpotName, &presenterName, &spot.Latitude, &spot.Longitude, &rawYouTubeLink, &spot.ArticleURL, &publishedAtValue, &refinedTS, &originalTS, &sentenceStartTS, &cSpotName, &cPlaceID, &cLat, &cLng, &cTimestamp); err != nil {
 			return nil, fmt.Errorf("scanning export row: %w", err)
 		}
 		if !publishedAtValue.Valid || strings.TrimSpace(publishedAtValue.String) == "" {
@@ -934,7 +1204,25 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 		if presenterName.Valid {
 			spot.PresenterName = presenterName.String
 		}
-		spot.YouTubeLink = withYouTubeTimestamp(rawYouTubeLink, refinedTS, originalTS, sentenceStartTS)
+		if cSpotName.Valid {
+			spot.SpotName = cSpotName.String
+		}
+		if cPlaceID.Valid && strings.TrimSpace(cPlaceID.String) != "" {
+			if !cLat.Valid || !cLng.Valid {
+				return nil, fmt.Errorf("spotId %s has corrected placeId %q without resolved coordinates", spot.SpotID, cPlaceID.String)
+			}
+			spot.PlaceID = cPlaceID.String
+			spot.Latitude = cLat.Float64
+			spot.Longitude = cLng.Float64
+		}
+		if cTimestamp.Valid {
+			if cTimestamp.Int64 < 0 {
+				return nil, fmt.Errorf("spotId %s has invalid corrected YouTube timestamp %d", spot.SpotID, cTimestamp.Int64)
+			}
+			spot.YouTubeLink = withYouTubeTimestampSeconds(rawYouTubeLink, cTimestamp.Int64)
+		} else {
+			spot.YouTubeLink = withYouTubeTimestamp(rawYouTubeLink, refinedTS, originalTS, sentenceStartTS)
+		}
 		data.Spots = append(data.Spots, spot)
 
 		if presenterName.Valid {
@@ -974,6 +1262,12 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 		if a.YouTubeLink > b.YouTubeLink {
 			return 1
 		}
+		if a.SpotID < b.SpotID {
+			return -1
+		}
+		if a.SpotID > b.SpotID {
+			return 1
+		}
 		return 0
 	})
 	for presenterName := range presenterLatestPublishedAt {
@@ -1005,11 +1299,27 @@ func withYouTubeTimestamp(raw string, refinedTS, originalTS, sentenceStartTS sql
 	if ts == nil || *ts < 0 {
 		return raw
 	}
+	return withYouTubeTimestampSeconds(raw, int64(*ts))
+}
+
+func withYouTubeTimestampSeconds(raw string, seconds int64) string {
+	if seconds < 0 {
+		return raw
+	}
 	videoID := extractYouTubeVideoID(raw)
 	if videoID == "" {
 		return raw
 	}
-	return fmt.Sprintf("https://youtu.be/%s?t=%d", videoID, int(*ts))
+	return fmt.Sprintf("https://youtu.be/%s?t=%d", videoID, seconds)
+}
+
+func pickedTimestampSeconds(refinedTS, originalTS, sentenceStartTS sql.NullFloat64) *int64 {
+	ts := pickTimestamp(refinedTS, originalTS, sentenceStartTS)
+	if ts == nil || *ts < 0 {
+		return nil
+	}
+	seconds := int64(*ts)
+	return &seconds
 }
 
 func pickTimestamp(refinedTS, originalTS, sentenceStartTS sql.NullFloat64) *float64 {

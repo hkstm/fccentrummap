@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildMapShareSearch, getInitialMapShareState, getSpotKey } from './share-state';
+import { buildMapShareSearch, getInitialMapShareState, getLegacySpotKey, getSpotKey } from './share-state';
 
 const presenters = ['Ray Fuego', 'Sef', 'Akwasi'];
 const spots = [
-  { placeId: 'place-ray', presenterName: 'Ray Fuego', spotName: 'Ray Spot', latitude: 52.1, longitude: 4.1 },
-  { placeId: 'place-sef', presenterName: 'Sef', spotName: 'Sef Spot', latitude: 52.2, longitude: 4.2 },
-  { placeId: 'place-akwasi', presenterName: 'Akwasi', spotName: 'Akwasi Spot', latitude: 52.3, longitude: 4.3 },
+  { spotId: '1:10', placeId: 'place-ray', presenterName: 'Ray Fuego', spotName: 'Ray Spot', latitude: 52.1, longitude: 4.1 },
+  { spotId: '1:11', placeId: 'place-sef', presenterName: 'Sef', spotName: 'Sef Spot', latitude: 52.2, longitude: 4.2 },
+  { spotId: '1:12', placeId: 'place-akwasi', presenterName: 'Akwasi', spotName: 'Akwasi Spot', latitude: 52.3, longitude: 4.3 },
 ];
 
 describe('map share state', () => {
@@ -17,13 +17,13 @@ describe('map share state', () => {
       getSpotKey(spots[1]),
     );
 
-    expect(search).toBe('?spot=place-sef%3A%3ASef%3A%3ASef+Spot%3A%3A52.2%3A%3A4.2&presenters=Sef%2CAkwasi&foo=bar');
+    expect(search).toBe('?spot=1%3A11&presenters=Sef%2CAkwasi&foo=bar');
   });
 
   it('omits presenter filters from share URLs when all presenters are selected', () => {
     const search = buildMapShareSearch('?foo=bar', presenters, new Set(presenters), getSpotKey(spots[1]));
 
-    expect(search).toBe('?spot=place-sef%3A%3ASef%3A%3ASef+Spot%3A%3A52.2%3A%3A4.2&foo=bar');
+    expect(search).toBe('?spot=1%3A11&foo=bar');
   });
 
   it('selects all presenters by default when no filter query is present', () => {
@@ -65,5 +65,13 @@ describe('map share state', () => {
 
     expect(state.activeSpotKey).toBe(activeKey);
     expect([...state.selectedPresenters]).toEqual(['Sef', 'Ray Fuego']);
+  });
+
+  it('opens legacy shared marker keys while storing stable spotId in state', () => {
+    const legacyKey = getLegacySpotKey(spots[0]);
+    const state = getInitialMapShareState(`?spot=${encodeURIComponent(legacyKey)}`, presenters, spots);
+
+    expect(state.activeSpotKey).toBe('1:10');
+    expect([...state.selectedPresenters]).toEqual(presenters);
   });
 });
