@@ -141,6 +141,7 @@ function SpotsLayer() {
             <AmsterdamXMarker
               color={colors[spot.presenterName] ?? '#0B57D0'}
               label={spot.spotName}
+              selected={activeSpotKey === markerKey}
             />
           </AdvancedMarker>
         );
