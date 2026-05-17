@@ -31,16 +31,6 @@
       "articleUrl": "https://fccentrum.nl/story/spots-van-lisa-korver/"
     },
     {
-      "spotId": "2:17",
-      "placeId": "ChIJ-dCV6U4JxkcR9fLLAK3_RpE",
-      "spotName": "Reguliersdwarsstraat",
-      "presenterName": "Edsilia Rombley",
-      "latitude": 52.3662857,
-      "longitude": 4.8910769,
-      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=198",
-      "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
-    },
-    {
       "spotId": "37:63",
       "placeId": "ChIJ-dU4O8IJxkcRI29YYUbfrXQ",
       "spotName": "The Lebanese Sajeria",
@@ -319,16 +309,6 @@
       "longitude": 4.8889491,
       "youtubeLink": "https://youtu.be/w5BiGW5pq8A?t=203",
       "articleUrl": "https://fccentrum.nl/story/de-spots-van-vlinder-merlijn-kamerling/"
-    },
-    {
-      "spotId": "2:20",
-      "placeId": "ChIJAyv13g8JxkcRWE0e5zWEQz0",
-      "spotName": "haar eigen muziekstudio",
-      "presenterName": "Edsilia Rombley",
-      "latitude": 52.374146800000005,
-      "longitude": 4.9354906,
-      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=542",
-      "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
     },
     {
       "spotId": "38:61",
@@ -1041,13 +1021,13 @@
       "articleUrl": "https://fccentrum.nl/story/de-spots-van-freek-van-noortwijk/"
     },
     {
-      "spotId": "2:18",
+      "spotId": "2:17",
       "placeId": "ChIJXxynOc4JxkcRcKCN8lwx4g8",
-      "spotName": "club Ministry",
+      "spotName": "Ministry",
       "presenterName": "Edsilia Rombley",
       "latitude": 52.3812469,
       "longitude": 4.8852132,
-      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=216",
+      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=198",
       "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
     },
     {
@@ -1259,6 +1239,16 @@
       "longitude": 4.9046495,
       "youtubeLink": "https://youtu.be/C_jgXKjII8I?t=39",
       "articleUrl": "https://fccentrum.nl/story/de-spots-van-sara-shawkat/"
+    },
+    {
+      "spotId": "2:20",
+      "placeId": "ChIJd_L9ReMJxkcR24lcvjSQ2YE",
+      "spotName": "DEMP Music Studio",
+      "presenterName": "Edsilia Rombley",
+      "latitude": 52.3576074,
+      "longitude": 4.871846199999999,
+      "youtubeLink": "https://youtu.be/Ykm5XN9pz6M?t=547",
+      "articleUrl": "https://fccentrum.nl/story/de-spots-van-edsilia-rombley/"
     },
     {
       "spotId": "43:34",
