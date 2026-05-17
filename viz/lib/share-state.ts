@@ -3,11 +3,17 @@ import type { Spot } from './types';
 export const SPOT_QUERY_PARAM = 'spot';
 export const PRESENTERS_QUERY_PARAM = 'presenters';
 
-export function getSpotKey(spot: Pick<Spot, 'placeId' | 'presenterName' | 'spotName' | 'latitude' | 'longitude'>) {
+type ShareableSpot = Pick<Spot, 'placeId' | 'presenterName' | 'spotName' | 'latitude' | 'longitude'> & Partial<Pick<Spot, 'spotId'>>;
+
+export function getLegacySpotKey(spot: Pick<Spot, 'placeId' | 'presenterName' | 'spotName' | 'latitude' | 'longitude'>) {
   return [spot.placeId || 'no-place-id', spot.presenterName, spot.spotName, spot.latitude, spot.longitude].join('::');
 }
 
-export function getInitialMapShareState<TSpot extends Pick<Spot, 'placeId' | 'presenterName' | 'spotName' | 'latitude' | 'longitude'>>(
+export function getSpotKey(spot: ShareableSpot) {
+  return spot.spotId?.trim() || getLegacySpotKey(spot);
+}
+
+export function getInitialMapShareState<TSpot extends ShareableSpot>(
   search: string,
   presenters: string[],
   spots: TSpot[],
@@ -33,9 +39,9 @@ export function getInitialMapShareState<TSpot extends Pick<Spot, 'placeId' | 'pr
   let activeSpotKey: string | null = null;
   const requestedSpotKey = params.get(SPOT_QUERY_PARAM);
   if (requestedSpotKey) {
-    const matchedSpot = spots.find((spot) => getSpotKey(spot) === requestedSpotKey);
+    const matchedSpot = spots.find((spot) => getSpotKey(spot) === requestedSpotKey || getLegacySpotKey(spot) === requestedSpotKey);
     if (matchedSpot) {
-      activeSpotKey = requestedSpotKey;
+      activeSpotKey = getSpotKey(matchedSpot);
       selectedPresenters.add(matchedSpot.presenterName);
     }
   }

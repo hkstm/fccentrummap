@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/hkstm/fccentrummap/internal/cliutil"
+	"github.com/hkstm/fccentrummap/internal/geocoder"
 	"github.com/hkstm/fccentrummap/internal/pipeline/acquireaudio"
 	"github.com/hkstm/fccentrummap/internal/pipeline/collectarticleurls"
 	"github.com/hkstm/fccentrummap/internal/pipeline/exportdata"
@@ -18,6 +22,7 @@ import (
 	"github.com/hkstm/fccentrummap/internal/pipeline/geocodespots"
 	"github.com/hkstm/fccentrummap/internal/pipeline/transcribeaudio"
 	"github.com/hkstm/fccentrummap/internal/repository"
+	"github.com/hkstm/fccentrummap/internal/spotcorrections"
 	"github.com/urfave/cli/v3"
 )
 
@@ -41,6 +46,7 @@ func main() {
 			transcribeAudioCommand(),
 			extractSpotsCommand(),
 			geocodeSpotsCommand(),
+			correctSpotCommand(),
 			exportDataCommand(),
 		},
 	}
@@ -304,6 +310,179 @@ func geocodeSpotsCommand() *cli.Command {
 	}
 }
 
+func normalizeCorrectionSpotIDArgument(raw string) (string, error) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return "", fmt.Errorf("correct-spot requires a stable spotId or map URL containing ?spot=")
+	}
+
+	if parsed, err := url.Parse(value); err == nil {
+		if spotID := strings.TrimSpace(parsed.Query().Get("spot")); spotID != "" {
+			return spotID, nil
+		}
+	}
+
+	if before, after, ok := strings.Cut(value, "spot="); ok {
+		if strings.Contains(before, "://") || strings.Contains(before, "?") || strings.Contains(before, "&") || strings.Contains(before, "#") || before == "" {
+			spotID := after
+			for _, sep := range []string{"&", "#"} {
+				if head, _, found := strings.Cut(spotID, sep); found {
+					spotID = head
+				}
+			}
+			decoded, err := url.QueryUnescape(spotID)
+			if err != nil {
+				return "", fmt.Errorf("decoding spot query parameter: %w", err)
+			}
+			if decoded = strings.TrimSpace(decoded); decoded != "" {
+				return decoded, nil
+			}
+			return "", fmt.Errorf("correct-spot URL is missing a non-empty spot query parameter")
+		}
+	}
+
+	if strings.Contains(value, "://") || strings.Contains(value, "?") {
+		return "", fmt.Errorf("correct-spot URL is missing a non-empty spot query parameter")
+	}
+
+	decoded, err := url.QueryUnescape(value)
+	if err != nil {
+		return "", fmt.Errorf("decoding spot id: %w", err)
+	}
+	if decoded = strings.TrimSpace(decoded); decoded != "" {
+		return decoded, nil
+	}
+	return "", fmt.Errorf("correct-spot requires a stable spotId or map URL containing ?spot=")
+}
+
+func correctSpotCommand() *cli.Command {
+	return &cli.Command{
+		Name:      "correct-spot",
+		Usage:     "Interactively create or update a spot correction by stable spotId or map URL",
+		ArgsUsage: "<spot-id-or-url>",
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database"},
+			&cli.BoolFlag{Name: "hide", Usage: "hide the spot from exported visualization data"},
+		},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			spotID, err := normalizeCorrectionSpotIDArgument(cmd.Args().First())
+			if err != nil {
+				return err
+			}
+			repo, err := repository.New(strings.TrimSpace(cmd.String("db-path")))
+			if err != nil {
+				return err
+			}
+			defer repo.Close()
+			if err := repo.InitSchema(); err != nil {
+				return err
+			}
+			if cmd.Bool("hide") {
+				updated, err := spotcorrections.NewService(repo, &lazyGooglePlaceLookup{}).SaveCorrection(ctx, spotcorrections.CorrectionInput{SpotID: spotID, Hide: true})
+				if err != nil {
+					return err
+				}
+				fmt.Fprintf(os.Stdout, "Hidden spotId %s\n", updated.SpotID)
+				return nil
+			}
+			return runInteractiveSpotCorrection(ctx, repo, &lazyGooglePlaceLookup{}, os.Stdin, os.Stdout, spotID)
+		},
+	}
+}
+
+type lazyGooglePlaceLookup struct {
+	client *geocoder.Geocoder
+}
+
+func (l *lazyGooglePlaceLookup) clientOrNew() (*geocoder.Geocoder, error) {
+	if l.client == nil {
+		client, err := geocoder.New()
+		if err != nil {
+			return nil, err
+		}
+		l.client = client
+	}
+	return l.client, nil
+}
+
+func (l *lazyGooglePlaceLookup) LookupPlaceIDCoordinates(ctx context.Context, placeID string) (*geocoder.Coordinates, error) {
+	client, err := l.clientOrNew()
+	if err != nil {
+		return nil, err
+	}
+	return client.LookupPlaceIDCoordinates(ctx, placeID)
+}
+
+func (l *lazyGooglePlaceLookup) ResolvePlaceInput(ctx context.Context, input string) (*geocoder.Coordinates, error) {
+	client, err := l.clientOrNew()
+	if err != nil {
+		return nil, err
+	}
+	return client.ResolvePlaceInput(ctx, input)
+}
+
+func runInteractiveSpotCorrection(ctx context.Context, repo spotcorrections.Repository, lookup spotcorrections.PlaceIDLookup, in io.Reader, out io.Writer, spotID string) error {
+	target, err := repo.GetSpotCorrectionTarget(spotID)
+	if err != nil {
+		return err
+	}
+	if target == nil {
+		return fmt.Errorf("spotId %s was not found among exportable source spots", spotID)
+	}
+
+	fmt.Fprintf(out, "Correcting spotId: %s\n", target.SpotID)
+	fmt.Fprintf(out, "Current name: %s\n", target.EffectiveSpotName)
+	fmt.Fprintf(out, "Current placeId: %s\n", target.EffectivePlaceID)
+	if target.EffectiveYouTubeTimestampSecs != nil {
+		fmt.Fprintf(out, "Current YouTube timestamp: %ds\n", *target.EffectiveYouTubeTimestampSecs)
+	} else {
+		fmt.Fprintln(out, "Current YouTube timestamp: none")
+	}
+	fmt.Fprintln(out, "Leave a prompt blank to preserve the current effective value.")
+
+	scanner := bufio.NewScanner(in)
+	readPrompt := func(label string) (string, error) {
+		fmt.Fprint(out, label)
+		if !scanner.Scan() {
+			if err := scanner.Err(); err != nil {
+				return "", err
+			}
+			return "", io.EOF
+		}
+		return strings.TrimSpace(scanner.Text()), nil
+	}
+
+	name, err := readPrompt("Updated spot name: ")
+	if err != nil {
+		return err
+	}
+	placeID, err := readPrompt("Updated Google placeId, Maps URL, or address: ")
+	if err != nil {
+		return err
+	}
+	timestampURL, err := readPrompt("Timestamped YouTube URL: ")
+	if err != nil {
+		return err
+	}
+
+	input := spotcorrections.CorrectionInput{SpotID: spotID}
+	if name != "" {
+		input.SpotName = &name
+	}
+	if placeID != "" {
+		input.PlaceID = &placeID
+	}
+	if timestampURL != "" {
+		input.TimestampedYouTubeURL = &timestampURL
+	}
+	updated, err := spotcorrections.NewService(repo, lookup).SaveCorrection(ctx, input)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Saved correction for spotId %s\n", updated.SpotID)
+	return nil
+}
+
 func exportDataCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "export-data",
@@ -379,11 +558,11 @@ func normalizeTranscribeAudioRequest(dbPath, language string) (transcribeaudio.R
 
 func normalizeExtractSpotsRequest(dbPath, outDir, model string) (extractspots.Request, error) {
 	req := extractspots.Request{
-		DBPath:     strings.TrimSpace(dbPath),
-		OutDir:     strings.TrimSpace(outDir),
-		Model: strings.TrimSpace(model),
-		APIKey:     defaultGeminiAPIKey(),
-		Endpoint:   strings.TrimSpace(os.Getenv("GOOGLE_GENERATIVE_LANGUAGE_ENDPOINT")),
+		DBPath:   strings.TrimSpace(dbPath),
+		OutDir:   strings.TrimSpace(outDir),
+		Model:    strings.TrimSpace(model),
+		APIKey:   defaultGeminiAPIKey(),
+		Endpoint: strings.TrimSpace(os.Getenv("GOOGLE_GENERATIVE_LANGUAGE_ENDPOINT")),
 	}
 	if req.OutDir == "" {
 		req.OutDir = cliutil.DefaultDataDir()

@@ -13,7 +13,7 @@ func TestInitSchemaCreatesV2TablesAndConstraints(t *testing.T) {
 
 	tables := []string{
 		"article_sources", "article_fetches", "article_texts", "audio_sources", "audio_transcriptions",
-		"spot_mentions", "spot_google_geocodes", "presenters", "article_presenters", "article_spots",
+		"spot_mentions", "spot_google_geocodes", "presenters", "article_presenters", "article_spots", "spot_corrections",
 	}
 	for _, table := range tables {
 		var name string

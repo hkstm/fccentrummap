@@ -15,7 +15,9 @@ function validateSpotsData(value: unknown): value is SpotsData {
   return !!v
     && Array.isArray(v.spots)
     && Array.isArray(v.presenters)
-    && v.spots.every((spot) => typeof spot.placeId === 'string'
+    && v.spots.every((spot) => typeof spot.spotId === 'string'
+      && spot.spotId.trim().length > 0
+      && typeof spot.placeId === 'string'
       && typeof spot.spotName === 'string'
       && typeof spot.presenterName === 'string'
       && typeof spot.latitude === 'number'
@@ -24,6 +26,7 @@ function validateSpotsData(value: unknown): value is SpotsData {
       && spot.youtubeLink.trim().length > 0
       && isValidUrl(spot.youtubeLink)
       && (spot.articleUrl === undefined || typeof spot.articleUrl === 'string'))
+    && new Set(v.spots.map((spot) => spot.spotId.trim())).size === v.spots.length
     && v.presenters.every((p) => typeof p.presenterName === 'string');
 }
 

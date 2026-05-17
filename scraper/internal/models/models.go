@@ -16,10 +16,10 @@ type ArticleFetch struct {
 }
 
 type ArticleText struct {
-	ArticleTextID   int64
-	ArticleFetchID  int64
-	CleanedText     string
-	ExtractedAt     time.Time
+	ArticleTextID  int64
+	ArticleFetchID int64
+	CleanedText    string
+	ExtractedAt    time.Time
 }
 
 type ArticleRaw struct {
@@ -129,6 +129,7 @@ type ArticleSpot struct {
 }
 
 type ExportSpot struct {
+	SpotID        string  `json:"spotId"`
 	PlaceID       string  `json:"placeId"`
 	SpotName      string  `json:"spotName"`
 	PresenterName string  `json:"presenterName"`
@@ -136,6 +137,39 @@ type ExportSpot struct {
 	Longitude     float64 `json:"longitude"`
 	YouTubeLink   string  `json:"youtubeLink"`
 	ArticleURL    string  `json:"articleUrl"`
+}
+
+// SpotCorrection stores optional maintainer overrides keyed by stable ExportSpot.SpotID.
+type SpotCorrection struct {
+	SpotID                  string
+	SpotName                *string
+	PlaceID                 *string
+	Latitude                *float64
+	Longitude               *float64
+	YouTubeTimestampSeconds *int64
+	Hidden                  bool
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+}
+
+// SpotCorrectionTarget exposes source and currently-effective values for correction prompts.
+type SpotCorrectionTarget struct {
+	SpotID                        string
+	SourceSpotName                string
+	SourcePlaceID                 string
+	SourceLatitude                float64
+	SourceLongitude               float64
+	SourceYouTubeLink             string
+	SourceYouTubeTimestampSecs    *int64
+	EffectiveSpotName             string
+	EffectivePlaceID              string
+	EffectiveLatitude             float64
+	EffectiveLongitude            float64
+	EffectiveYouTubeLink          string
+	EffectiveYouTubeTimestampSecs *int64
+	ArticleURL                    string
+	PresenterName                 string
+	Correction                    *SpotCorrection
 }
 
 type ExportPresenter struct {

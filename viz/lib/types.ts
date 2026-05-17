@@ -1,4 +1,5 @@
 export type Spot = {
+  spotId: string;
   placeId: string;
   spotName: string;
   presenterName: string;
