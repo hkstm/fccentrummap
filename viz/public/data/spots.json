@@ -11,16 +11,6 @@
       "articleUrl": "https://fccentrum.nl/story/de-spots-van-freek-van-noortwijk/"
     },
     {
-      "spotId": "4:22",
-      "placeId": "",
-      "spotName": "Slapende Smurf",
-      "presenterName": "Mascha Feoktistova",
-      "latitude": 52.3843533,
-      "longitude": 4.8822334,
-      "youtubeLink": "https://youtu.be/R_bjN8GHCeQ?t=120",
-      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-beautygloss-mascha-feoktistova-in-amsterdam/"
-    },
-    {
       "spotId": "10:180",
       "placeId": "ChIJ-1X_9M0JxkcR6m3KYBdx9Xw",
       "spotName": "A Volo",
@@ -259,6 +249,16 @@
       "longitude": 4.891827,
       "youtubeLink": "https://youtu.be/h_f4U1g0vng?t=186",
       "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-casper-reinders/"
+    },
+    {
+      "spotId": "4:22",
+      "placeId": "ChIJ880AP9IJxkcRzS5_vS6zxQ0",
+      "spotName": "Slapende Smurf",
+      "presenterName": "Mascha Feoktistova",
+      "latitude": 52.3844456,
+      "longitude": 4.8822001,
+      "youtubeLink": "https://youtu.be/R_bjN8GHCeQ?t=120",
+      "articleUrl": "https://fccentrum.nl/story/de-favoriete-spots-van-beautygloss-mascha-feoktistova-in-amsterdam/"
     },
     {
       "spotId": "41:42",
