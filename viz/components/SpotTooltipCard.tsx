@@ -55,7 +55,14 @@ export function SpotTooltipCard({ spot, onClose }: Props) {
         <Button
           type="button"
           className="spotTooltipAction mt-2"
-          onClick={() => window.open(`https://www.google.com/maps/place/?q=place_id:${spot.placeId}`, '_blank', 'noopener,noreferrer')}
+          onClick={() => {
+            const mapsParams = new URLSearchParams({
+              api: '1',
+              query: spot.spotName,
+              query_place_id: spot.placeId,
+            });
+            window.open(`https://www.google.com/maps/search/?${mapsParams.toString()}`, '_blank', 'noopener,noreferrer');
+          }}
         >
           <svg className="spotTooltipActionIcon" viewBox="0 0 384 512" aria-hidden="true">
             <path d="M172.3 501.7C26.97 291 0 269.4 0 192 0 85.96 85.96 0 192 0s192 85.96 192 192c0 77.4-26.97 99-172.3 309.7-9.535 13.77-29.93 13.77-39.46 0zM192 272c44.11 0 80-35.89 80-80s-35.89-80-80-80-80 35.89-80 80 35.9 80 80 80z" />
