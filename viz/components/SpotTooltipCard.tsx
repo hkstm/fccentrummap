@@ -10,6 +10,22 @@ type Props = {
   onClose: () => void;
 };
 
+function isMobileBrowser() {
+  const userAgent = window.navigator.userAgent;
+  const isTouchMac = /Macintosh/.test(userAgent) && window.navigator.maxTouchPoints > 1;
+
+  return /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(userAgent) || isTouchMac;
+}
+
+function openDeepLinkUrl(url: string) {
+  if (isMobileBrowser()) {
+    window.location.assign(url);
+    return;
+  }
+
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 export function SpotTooltipCard({ spot, onClose }: Props) {
   return (
     <Card className="spotTooltip" role="dialog" aria-label={`Spot details: ${spot.spotName}`}>
@@ -45,7 +61,7 @@ export function SpotTooltipCard({ spot, onClose }: Props) {
         <Button
           type="button"
           className="spotTooltipAction"
-          onClick={() => window.open(spot.youtubeLink, '_blank', 'noopener,noreferrer')}
+          onClick={() => openDeepLinkUrl(spot.youtubeLink)}
         >
           <svg className="spotTooltipActionIcon" viewBox="0 0 576 512" aria-hidden="true">
             <path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.321 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z" />
@@ -61,7 +77,7 @@ export function SpotTooltipCard({ spot, onClose }: Props) {
               query: spot.spotName,
               query_place_id: spot.placeId,
             });
-            window.open(`https://www.google.com/maps/search/?${mapsParams.toString()}`, '_blank', 'noopener,noreferrer');
+            openDeepLinkUrl(`https://www.google.com/maps/search/?${mapsParams.toString()}`);
           }}
         >
           <svg className="spotTooltipActionIcon" viewBox="0 0 384 512" aria-hidden="true">
