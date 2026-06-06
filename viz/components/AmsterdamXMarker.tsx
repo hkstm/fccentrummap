@@ -13,8 +13,8 @@ export function AmsterdamXMarker({ color, label, selected = false }: Props) {
       title={label}
     >
       <span className="markerHitbox" aria-hidden="true" />
-      <svg viewBox="0 0 60 90" aria-hidden="true">
-        <g transform="translate(30,42)">
+      <svg viewBox="0 0 40 40" aria-hidden="true">
+        <g transform="translate(20,20)">
           {selected && (
             <>
               <rect className="markerHalo" x={-4} y={-22} width={8} height={44} rx={2} fill="none" stroke="white" strokeWidth={8} transform="rotate(45)" />

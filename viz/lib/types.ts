@@ -3,19 +3,25 @@ export type Spot = {
   placeId: string;
   spotName: string;
   presenterName: string;
+  categoryName: string;
   latitude: number;
   longitude: number;
   youtubeLink: string;
   articleUrl?: string;
 };
 
-export type Presenter = {
+export type PresenterMetadata = {
   presenterName: string;
 };
 
+export type CategoryMetadata = {
+  categoryName: string;
+};
+
 export type SpotsData = {
+  presenters?: PresenterMetadata[];
+  categories?: CategoryMetadata[];
   spots: Spot[];
-  presenters: Presenter[];
 };
 
 export type SpotWithPosition = Spot & {

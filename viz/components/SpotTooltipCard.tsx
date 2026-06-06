@@ -55,6 +55,7 @@ export function SpotTooltipCard({ spot, onClose }: Props) {
           </Button>
         </div>
         <CardTitle className="spotTooltipTitle">{spot.spotName}</CardTitle>
+        <p className="spotTooltipMeta">{spot.categoryName}</p>
       </CardHeader>
       <CardContent className="pt-0">
         <Separator className="mb-2" />

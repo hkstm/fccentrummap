@@ -195,8 +195,8 @@ gmp-advanced-marker:has(.markerButton) > div {
   appearance: none;
   border: none;
   background: transparent;
-  width: 44px;
-  height: 44px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   position: relative;
   pointer-events: none;
@@ -205,10 +205,7 @@ gmp-advanced-marker:has(.markerButton) > div {
 }
 .markerHitbox {
   position: absolute;
-  left: 10px;
-  top: 9px;
-  width: 24px;
-  height: 24px;
+  inset: 0;
   border-radius: 4px;
   cursor: pointer;
   pointer-events: auto;
@@ -229,8 +226,8 @@ gmp-advanced-marker:has(.markerButton) > div {
   border-radius: 999px;
 }
 .markerButton svg {
-  width: 44px;
-  height: 44px;
+  width: 20px;
+  height: 20px;
   filter: drop-shadow(0 2px 3px rgba(0,0,0,.2));
   pointer-events: none;
 }
