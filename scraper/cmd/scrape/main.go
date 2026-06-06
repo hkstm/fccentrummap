@@ -12,16 +12,16 @@ import (
 	"strings"
 
 	"github.com/hkstm/fccentrummap/internal/cliutil"
+	"github.com/hkstm/fccentrummap/internal/genai"
 	"github.com/hkstm/fccentrummap/internal/geocoder"
-	"github.com/hkstm/fccentrummap/internal/pipeline/acquireaudio"
+	"github.com/hkstm/fccentrummap/internal/models"
 	"github.com/hkstm/fccentrummap/internal/pipeline/collectarticleurls"
 	"github.com/hkstm/fccentrummap/internal/pipeline/exportdata"
-	"github.com/hkstm/fccentrummap/internal/pipeline/extractarticletext"
-	"github.com/hkstm/fccentrummap/internal/pipeline/extractspots"
+	"github.com/hkstm/fccentrummap/internal/pipeline/extractspotsgeminidirect"
 	"github.com/hkstm/fccentrummap/internal/pipeline/fetcharticles"
 	"github.com/hkstm/fccentrummap/internal/pipeline/geocodespots"
-	"github.com/hkstm/fccentrummap/internal/pipeline/transcribeaudio"
 	"github.com/hkstm/fccentrummap/internal/repository"
+	"github.com/hkstm/fccentrummap/internal/spotcategories"
 	"github.com/hkstm/fccentrummap/internal/spotcorrections"
 	"github.com/urfave/cli/v3"
 )
@@ -41,11 +41,9 @@ func main() {
 			initCommand(),
 			collectArticleURLsCommand(),
 			fetchArticlesCommand(),
-			extractArticleTextCommand(),
-			acquireAudioCommand(),
-			transcribeAudioCommand(),
-			extractSpotsCommand(),
+			extractSpotsGeminiDirectCommand(),
 			geocodeSpotsCommand(),
+			mapSpotCategoriesCommand(),
 			correctSpotCommand(),
 			exportDataCommand(),
 		},
@@ -63,6 +61,7 @@ func initCommand() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database"},
 			&cli.BoolFlag{Name: "reset", Value: false, Usage: "remove database file before schema init"},
+			&cli.BoolFlag{Name: "reset-gemini-derived", Value: false, Usage: "delete Gemini-derived mentions/geocodes/links/corrections while preserving articles/fetches"},
 			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite|file"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
@@ -87,6 +86,12 @@ func initCommand() *cli.Command {
 			defer repo.Close()
 			if err := repo.InitSchema(); err != nil {
 				return fmt.Errorf("failed to initialize schema: %w", err)
+			}
+			if cmd.Bool("reset-gemini-derived") {
+				if err := repo.ResetGeminiDerivedData(); err != nil {
+					return err
+				}
+				fmt.Printf("reset_gemini_derived db=%s\n", dbPath)
 			}
 			fmt.Printf("initialized db=%s\n", dbPath)
 			return nil
@@ -151,113 +156,33 @@ func fetchArticlesCommand() *cli.Command {
 	}
 }
 
-func extractArticleTextCommand() *cli.Command {
+func extractSpotsGeminiDirectCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "extract-article-text",
-		Usage: "Extract and persist cleaned article text",
+		Name:  "extract-spots-gemini-direct",
+		Usage: "Experimentally extract spot candidates directly from article and YouTube URLs with Gemini",
 		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite (file not supported yet)"},
+			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite (file not supported)"},
 			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database"},
+			&cli.StringFlag{Name: "out-dir", Value: filepath.Join(cliutil.DefaultDataDir(), "gemini-direct"), Usage: "directory for Gemini-direct artifacts"},
+			&cli.StringFlag{Name: "model", Value: defaultGenAIModel(), Usage: "Gemini model identifier"},
+			&cli.IntFlag{Name: "limit", Value: 0, Usage: "maximum number of new Gemini requests to make (0 means no limit)"},
+			&cli.BoolFlag{Name: "force", Value: false, Usage: "regenerate artifacts and call Gemini even when parsed artifacts already exist"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			mode := cmd.String("io")
-			if err := validateStageMode("extract-article-text", mode); err != nil {
+			if err := validateStageMode("extract-spots-gemini-direct", mode); err != nil {
 				return err
 			}
-			req := extractarticletext.Request{DBPath: strings.TrimSpace(cmd.String("db-path"))}
-			svc := extractarticletext.NewService(extractarticletext.NewSQLiteAdapter(), extractarticletext.NewFileAdapter())
+			req, err := normalizeExtractSpotsGeminiDirectRequest(cmd.String("db-path"), cmd.String("out-dir"), cmd.String("model"), cmd.Bool("force"), cmd.Int("limit"))
+			if err != nil {
+				return err
+			}
+			svc := extractspotsgeminidirect.NewService(extractspotsgeminidirect.NewSQLiteAdapter(), extractspotsgeminidirect.NewFileAdapter())
 			res, err := svc.Run(ctx, mode, req)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("processed %d article texts\n", res.ProcessedCount)
-			return nil
-		},
-	}
-}
-
-func acquireAudioCommand() *cli.Command {
-	return &cli.Command{
-		Name:  "acquire-audio",
-		Usage: "Acquire and store audio",
-		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite (file not supported yet)"},
-			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database"},
-		},
-		Action: func(ctx context.Context, cmd *cli.Command) error {
-			mode := cmd.String("io")
-			if err := validateStageMode("acquire-audio", mode); err != nil {
-				return err
-			}
-			req, err := normalizeAcquireAudioRequest(cmd.String("db-path"))
-			if err != nil {
-				return err
-			}
-			svc := acquireaudio.NewService(acquireaudio.NewSQLiteAdapter(), acquireaudio.NewFileAdapter())
-			_, err = svc.Run(ctx, mode, req)
-			if err != nil {
-				return err
-			}
-			fmt.Println("acquired audio")
-			return nil
-		},
-	}
-}
-
-func transcribeAudioCommand() *cli.Command {
-	return &cli.Command{
-		Name:  "transcribe-audio",
-		Usage: "Transcribe audio via Murmel",
-		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite (file not supported yet)"},
-			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database"},
-			&cli.StringFlag{Name: "language", Value: "nl", Usage: "language code sent to Murmel"},
-		},
-		Action: func(ctx context.Context, cmd *cli.Command) error {
-			mode := cmd.String("io")
-			if err := validateStageMode("transcribe-audio", mode); err != nil {
-				return err
-			}
-			req, err := normalizeTranscribeAudioRequest(cmd.String("db-path"), cmd.String("language"))
-			if err != nil {
-				return err
-			}
-			svc := transcribeaudio.NewService(transcribeaudio.NewSQLiteAdapter(), transcribeaudio.NewFileAdapter())
-			res, err := svc.Run(ctx, mode, req)
-			if err != nil {
-				return err
-			}
-			fmt.Printf("transcription_ids=%v\n", res.TranscriptionIDs)
-			return nil
-		},
-	}
-}
-
-func extractSpotsCommand() *cli.Command {
-	return &cli.Command{
-		Name:  "extract-spots",
-		Usage: "Extract place candidates from transcription",
-		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite (file not supported yet)"},
-			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database"},
-			&cli.StringFlag{Name: "out-dir", Value: cliutil.DefaultDataDir(), Usage: "directory for extraction artifacts"},
-			&cli.StringFlag{Name: "model", Value: defaultGenAIModel(), Usage: "GenAI model identifier (e.g. gemini-3.1-pro-preview)"},
-		},
-		Action: func(ctx context.Context, cmd *cli.Command) error {
-			mode := cmd.String("io")
-			if err := validateStageMode("extract-spots", mode); err != nil {
-				return err
-			}
-			req, err := normalizeExtractSpotsRequest(cmd.String("db-path"), cmd.String("out-dir"), cmd.String("model"))
-			if err != nil {
-				return err
-			}
-			svc := extractspots.NewService(extractspots.NewSQLiteAdapter(), extractspots.NewFileAdapter())
-			res, err := svc.Run(ctx, mode, req)
-			if err != nil {
-				return err
-			}
-			fmt.Printf("spot_extraction_ids=%v\n", res.SpotExtractionIDs)
+			fmt.Printf("processed=%d skipped=%d cached=%d out_dir=%s\n", res.ProcessedCount, res.SkippedCount, res.CachedCount, res.OutputDir)
 			return nil
 		},
 	}
@@ -271,6 +196,7 @@ func geocodeSpotsCommand() *cli.Command {
 			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite|file"},
 			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database (sqlite mode)"},
 			&cli.StringFlag{Name: "in", Usage: "required for --io file"},
+			&cli.StringFlag{Name: "spot-source", Value: string(models.SpotSourceGeminiDirect), Usage: "spot source for SQLite mode: gemini-direct"},
 			&cli.BoolFlag{Name: "export-json", Value: false, Usage: "also export scraping data JSON after geocoding (sqlite mode only)"},
 			&cli.StringFlag{Name: "export-out", Value: filepath.Clean("../viz/public/data/spots.json"), Usage: "JSON export output path"},
 		},
@@ -279,7 +205,7 @@ func geocodeSpotsCommand() *cli.Command {
 			if err := validateStageMode("geocode-spots", mode); err != nil {
 				return err
 			}
-			req, err := normalizeGeocodeSpotsRequest(mode, cmd.String("db-path"), cmd.String("in"))
+			req, err := normalizeGeocodeSpotsRequest(mode, cmd.String("db-path"), cmd.String("in"), cmd.String("spot-source"))
 			if err != nil {
 				return err
 			}
@@ -288,13 +214,13 @@ func geocodeSpotsCommand() *cli.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("artifact=%s\n", res.OutputPath)
+			fmt.Printf("artifact=%s spot_source=%s\n", res.OutputPath, req.SpotSource)
 
 			if cmd.Bool("export-json") {
 				if mode != ioSQLite {
 					return fmt.Errorf("--export-json requires --io sqlite")
 				}
-				exportReq, err := normalizeExportDataRequest(cmd.String("db-path"), cmd.String("export-out"))
+				exportReq, err := normalizeExportDataRequest(cmd.String("db-path"), cmd.String("export-out"), string(req.SpotSource))
 				if err != nil {
 					return err
 				}
@@ -355,6 +281,44 @@ func normalizeCorrectionSpotIDArgument(raw string) (string, error) {
 	return "", fmt.Errorf("correct-spot requires a stable spotId or map URL containing ?spot=")
 }
 
+func mapSpotCategoriesCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "map-spot-categories",
+		Usage: "Map observed Google Places primary type display names to frontend categories with Gemini",
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite (file not supported)"},
+			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database"},
+			&cli.StringFlag{Name: "model", Value: defaultGenAIModel(), Usage: "Gemini model identifier"},
+		},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			mode := cmd.String("io")
+			if err := validateStageMode("map-spot-categories", mode); err != nil {
+				return err
+			}
+			dbPath := strings.TrimSpace(cmd.String("db-path"))
+			model := strings.TrimSpace(cmd.String("model"))
+			if model == "" {
+				model = defaultGenAIModel()
+			}
+			repo, err := repository.New(dbPath)
+			if err != nil {
+				return err
+			}
+			defer repo.Close()
+			if err := repo.InitSchema(); err != nil {
+				return err
+			}
+			client := genai.NewClientWithEndpoint(defaultGeminiAPIKey(), model, strings.TrimSpace(os.Getenv("GOOGLE_GENERATIVE_LANGUAGE_ENDPOINT")))
+			mapped, err := spotcategories.NewService(repo, client, model).Run(ctx)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("mapped=%d model=%s\n", mapped, model)
+			return nil
+		},
+	}
+}
+
 func correctSpotCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "correct-spot",
@@ -362,6 +326,7 @@ func correctSpotCommand() *cli.Command {
 		ArgsUsage: "<spot-id-or-url>",
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database"},
+			&cli.StringFlag{Name: "spot-source", Value: string(models.SpotSourceGeminiDirect), Usage: "spot source: gemini-direct"},
 			&cli.BoolFlag{Name: "hide", Usage: "hide the spot from exported visualization data"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
@@ -377,15 +342,19 @@ func correctSpotCommand() *cli.Command {
 			if err := repo.InitSchema(); err != nil {
 				return err
 			}
+			source, err := models.NormalizeSpotSource(cmd.String("spot-source"))
+			if err != nil {
+				return err
+			}
 			if cmd.Bool("hide") {
-				updated, err := spotcorrections.NewService(repo, &lazyGooglePlaceLookup{}).SaveCorrection(ctx, spotcorrections.CorrectionInput{SpotID: spotID, Hide: true})
+				updated, err := spotcorrections.NewService(repo, &lazyGooglePlaceLookup{}).SaveCorrection(ctx, spotcorrections.CorrectionInput{SpotID: spotID, SpotSource: source, Hide: true})
 				if err != nil {
 					return err
 				}
 				fmt.Fprintf(os.Stdout, "Hidden spotId %s\n", updated.SpotID)
 				return nil
 			}
-			return runInteractiveSpotCorrection(ctx, repo, &lazyGooglePlaceLookup{}, os.Stdin, os.Stdout, spotID)
+			return runInteractiveSpotCorrection(ctx, repo, &lazyGooglePlaceLookup{}, os.Stdin, os.Stdout, spotID, source)
 		},
 	}
 }
@@ -421,8 +390,8 @@ func (l *lazyGooglePlaceLookup) ResolvePlaceInput(ctx context.Context, input str
 	return client.ResolvePlaceInput(ctx, input)
 }
 
-func runInteractiveSpotCorrection(ctx context.Context, repo spotcorrections.Repository, lookup spotcorrections.PlaceIDLookup, in io.Reader, out io.Writer, spotID string) error {
-	target, err := repo.GetSpotCorrectionTarget(spotID)
+func runInteractiveSpotCorrection(ctx context.Context, repo spotcorrections.Repository, lookup spotcorrections.PlaceIDLookup, in io.Reader, out io.Writer, spotID string, source models.SpotSource) error {
+	target, err := repo.GetSpotCorrectionTargetForSource(source, spotID)
 	if err != nil {
 		return err
 	}
@@ -465,7 +434,7 @@ func runInteractiveSpotCorrection(ctx context.Context, repo spotcorrections.Repo
 		return err
 	}
 
-	input := spotcorrections.CorrectionInput{SpotID: spotID}
+	input := spotcorrections.CorrectionInput{SpotID: spotID, SpotSource: source}
 	if name != "" {
 		input.SpotName = &name
 	}
@@ -491,13 +460,14 @@ func exportDataCommand() *cli.Command {
 			&cli.StringFlag{Name: "io", Value: ioSQLite, Usage: "I/O mode: sqlite (file not supported yet)"},
 			&cli.StringFlag{Name: "db-path", Value: cliutil.DefaultDBPath(), Usage: "path to SQLite database"},
 			&cli.StringFlag{Name: "out", Value: filepath.Clean("../viz/public/data/spots.json"), Usage: "output path"},
+			&cli.StringFlag{Name: "spot-source", Value: string(models.SpotSourceGeminiDirect), Usage: "spot source: gemini-direct"},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			mode := cmd.String("io")
 			if err := validateStageMode("export-data", mode); err != nil {
 				return err
 			}
-			req, err := normalizeExportDataRequest(cmd.String("db-path"), cmd.String("out"))
+			req, err := normalizeExportDataRequest(cmd.String("db-path"), cmd.String("out"), cmd.String("spot-source"))
 			if err != nil {
 				return err
 			}
@@ -506,7 +476,7 @@ func exportDataCommand() *cli.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("exported=%s\n", res.OutputPath)
+			fmt.Printf("exported=%s spot_source=%s\n", res.OutputPath, req.SpotSource)
 			return nil
 		},
 	}
@@ -543,29 +513,21 @@ func normalizeFetchArticlesRequest(dbPath string) (fetcharticles.Request, error)
 	return req, nil
 }
 
-func normalizeAcquireAudioRequest(dbPath string) (acquireaudio.Request, error) {
-	req := acquireaudio.Request{DBPath: strings.TrimSpace(dbPath)}
-	return req, nil
-}
-
-func normalizeTranscribeAudioRequest(dbPath, language string) (transcribeaudio.Request, error) {
-	req := transcribeaudio.Request{DBPath: strings.TrimSpace(dbPath), Language: strings.TrimSpace(language)}
-	if req.Language == "" {
-		req.Language = "nl"
-	}
-	return req, nil
-}
-
-func normalizeExtractSpotsRequest(dbPath, outDir, model string) (extractspots.Request, error) {
-	req := extractspots.Request{
+func normalizeExtractSpotsGeminiDirectRequest(dbPath, outDir, model string, force bool, limit int) (extractspotsgeminidirect.Request, error) {
+	req := extractspotsgeminidirect.Request{
 		DBPath:   strings.TrimSpace(dbPath),
 		OutDir:   strings.TrimSpace(outDir),
 		Model:    strings.TrimSpace(model),
 		APIKey:   defaultGeminiAPIKey(),
 		Endpoint: strings.TrimSpace(os.Getenv("GOOGLE_GENERATIVE_LANGUAGE_ENDPOINT")),
+		Force:    force,
+		Limit:    limit,
+	}
+	if req.Limit < 0 {
+		return extractspotsgeminidirect.Request{}, fmt.Errorf("--limit must be >= 0")
 	}
 	if req.OutDir == "" {
-		req.OutDir = cliutil.DefaultDataDir()
+		req.OutDir = filepath.Join(cliutil.DefaultDataDir(), "gemini-direct")
 	}
 	if req.Model == "" {
 		req.Model = defaultGenAIModel()
@@ -573,16 +535,24 @@ func normalizeExtractSpotsRequest(dbPath, outDir, model string) (extractspots.Re
 	return req, nil
 }
 
-func normalizeGeocodeSpotsRequest(mode, dbPath, inputPath string) (geocodespots.Request, error) {
-	req := geocodespots.Request{DBPath: strings.TrimSpace(dbPath), InputPath: strings.TrimSpace(inputPath)}
+func normalizeGeocodeSpotsRequest(mode, dbPath, inputPath, spotSource string) (geocodespots.Request, error) {
+	source, err := models.NormalizeSpotSource(spotSource)
+	if err != nil {
+		return geocodespots.Request{}, err
+	}
+	req := geocodespots.Request{DBPath: strings.TrimSpace(dbPath), InputPath: strings.TrimSpace(inputPath), SpotSource: source}
 	if mode == ioFile && req.InputPath == "" {
 		return geocodespots.Request{}, fmt.Errorf("geocodespots file input requires inputPath")
 	}
 	return req, nil
 }
 
-func normalizeExportDataRequest(dbPath, outputPath string) (exportdata.Request, error) {
-	req := exportdata.Request{DBPath: strings.TrimSpace(dbPath), OutputPath: strings.TrimSpace(outputPath)}
+func normalizeExportDataRequest(dbPath, outputPath, spotSource string) (exportdata.Request, error) {
+	source, err := models.NormalizeSpotSource(spotSource)
+	if err != nil {
+		return exportdata.Request{}, err
+	}
+	req := exportdata.Request{DBPath: strings.TrimSpace(dbPath), OutputPath: strings.TrimSpace(outputPath), SpotSource: source}
 	if req.OutputPath == "" {
 		req.OutputPath = filepath.Clean("../viz/public/data/spots.json")
 	}
@@ -595,15 +565,13 @@ func validateStageMode(stage, mode string) error {
 		return fmt.Errorf("invalid --io value %q (expected sqlite|file)", mode)
 	}
 	supported := map[string]map[string]bool{
-		"init":                 {ioSQLite: true},
-		"collect-article-urls": {ioSQLite: true},
-		"fetch-articles":       {ioSQLite: true},
-		"extract-article-text": {ioSQLite: true},
-		"acquire-audio":        {ioSQLite: true},
-		"transcribe-audio":     {ioSQLite: true},
-		"extract-spots":        {ioSQLite: true},
-		"geocode-spots":        {ioSQLite: true, ioFile: true},
-		"export-data":          {ioSQLite: true},
+		"init":                        {ioSQLite: true},
+		"collect-article-urls":        {ioSQLite: true},
+		"fetch-articles":              {ioSQLite: true},
+		"extract-spots-gemini-direct": {ioSQLite: true},
+		"geocode-spots":               {ioSQLite: true, ioFile: true},
+		"map-spot-categories":         {ioSQLite: true},
+		"export-data":                 {ioSQLite: true},
 	}
 	if !supported[stage][mode] {
 		return fmt.Errorf("stage %s does not support --io %s", stage, mode)

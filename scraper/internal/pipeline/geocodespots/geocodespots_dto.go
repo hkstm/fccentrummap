@@ -1,8 +1,11 @@
 package geocodespots
 
+import "github.com/hkstm/fccentrummap/internal/models"
+
 type Request struct {
-	DBPath    string
-	InputPath string
+	DBPath     string
+	InputPath  string
+	SpotSource models.SpotSource
 }
 
 type Response struct {

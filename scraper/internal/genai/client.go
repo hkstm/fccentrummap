@@ -43,17 +43,24 @@ func NewClientWithEndpoint(apiKey, model, endpointBase string) *Client {
 
 func (c *Client) Validate() error {
 	if c.apiKey == "" {
-		return fmt.Errorf("Gemini API key is not set; provide --gemini-api-key or set GEMINI_API_KEY/GOOGLE_API_KEY before running extract-spots-dry-run")
+		return fmt.Errorf("Gemini API key is not set; provide --gemini-api-key or set GEMINI_API_KEY/GOOGLE_API_KEY before running extract-spots-gemini-direct")
 	}
 	if c.model == "" {
-		return fmt.Errorf("Gemma model is not configured; set --model or MODEL before running extract-spots-dry-run")
+		return fmt.Errorf("Gemini model is not configured; set --model or MODEL before running extract-spots-gemini-direct")
 	}
 	return nil
 }
 
 func (c *Client) GenerateContent(ctx context.Context, prompt string, config *gogenai.GenerateContentConfig) (*GenerateContentResult, error) {
+	return c.GenerateContentWithParts(ctx, []*gogenai.Part{gogenai.NewPartFromText(prompt)}, config)
+}
+
+func (c *Client) GenerateContentWithParts(ctx context.Context, parts []*gogenai.Part, config *gogenai.GenerateContentConfig) (*GenerateContentResult, error) {
 	if config == nil {
 		return nil, fmt.Errorf("generateContent config is required")
+	}
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("generateContent parts are required")
 	}
 	if err := c.Validate(); err != nil {
 		return nil, err
@@ -76,7 +83,7 @@ func (c *Client) GenerateContent(ctx context.Context, prompt string, config *gog
 		return nil, fmt.Errorf("create genai client: %w", err)
 	}
 
-	contents := []*gogenai.Content{gogenai.NewContentFromText(prompt, gogenai.RoleUser)}
+	contents := []*gogenai.Content{{Role: gogenai.RoleUser, Parts: parts}}
 	response, err := client.Models.GenerateContent(ctx, c.model, contents, config)
 	if err != nil {
 		statusCode, body := capture.LastResponse()

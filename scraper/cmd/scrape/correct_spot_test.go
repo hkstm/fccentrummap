@@ -27,6 +27,14 @@ func (r *correctionRepoStub) UpsertSpotCorrection(c models.SpotCorrection) error
 	return nil
 }
 
+func (r *correctionRepoStub) GetSpotCorrectionTargetForSource(_ models.SpotSource, spotID string) (*models.SpotCorrectionTarget, error) {
+	return r.GetSpotCorrectionTarget(spotID)
+}
+
+func (r *correctionRepoStub) UpsertSpotCorrectionForSource(_ models.SpotSource, c models.SpotCorrection) error {
+	return r.UpsertSpotCorrection(c)
+}
+
 type correctionLookupStub struct {
 	err error
 }
@@ -78,7 +86,7 @@ func TestRunInteractiveSpotCorrectionSavesPromptedValues(t *testing.T) {
 		EffectiveYouTubeTimestampSecs: &ts,
 	}}
 	var out strings.Builder
-	err := runInteractiveSpotCorrection(context.Background(), repo, correctionLookupStub{}, strings.NewReader("New Name\nnew_place\nhttps://youtu.be/abc?t=90\n"), &out, "1:1")
+	err := runInteractiveSpotCorrection(context.Background(), repo, correctionLookupStub{}, strings.NewReader("New Name\nnew_place\nhttps://youtu.be/abc?t=90\n"), &out, "1:1", models.SpotSourceGeminiDirect)
 	if err != nil {
 		t.Fatalf("runInteractiveSpotCorrection: %v", err)
 	}
@@ -93,7 +101,7 @@ func TestRunInteractiveSpotCorrectionSavesPromptedValues(t *testing.T) {
 func TestRunInteractiveSpotCorrectionBlankInputsPreserveExistingValues(t *testing.T) {
 	repo := &correctionRepoStub{target: &models.SpotCorrectionTarget{SpotID: "1:1", EffectiveSpotName: "Old", EffectivePlaceID: "old"}}
 	var out strings.Builder
-	if err := runInteractiveSpotCorrection(context.Background(), repo, correctionLookupStub{}, strings.NewReader("\n\n\n"), &out, "1:1"); err != nil {
+	if err := runInteractiveSpotCorrection(context.Background(), repo, correctionLookupStub{}, strings.NewReader("\n\n\n"), &out, "1:1", models.SpotSourceGeminiDirect); err != nil {
 		t.Fatalf("runInteractiveSpotCorrection: %v", err)
 	}
 	if repo.saved == nil || repo.saved.SpotName != nil || repo.saved.PlaceID != nil || repo.saved.YouTubeTimestampSeconds != nil {
@@ -103,16 +111,16 @@ func TestRunInteractiveSpotCorrectionBlankInputsPreserveExistingValues(t *testin
 
 func TestRunInteractiveSpotCorrectionActionableErrors(t *testing.T) {
 	var out strings.Builder
-	if err := runInteractiveSpotCorrection(context.Background(), &correctionRepoStub{}, correctionLookupStub{}, strings.NewReader("\n\n\n"), &out, "missing"); err == nil || !strings.Contains(err.Error(), "not found") {
+	if err := runInteractiveSpotCorrection(context.Background(), &correctionRepoStub{}, correctionLookupStub{}, strings.NewReader("\n\n\n"), &out, "missing", models.SpotSourceGeminiDirect); err == nil || !strings.Contains(err.Error(), "not found") {
 		t.Fatalf("expected unknown spot error, got %v", err)
 	}
 
 	repo := &correctionRepoStub{target: &models.SpotCorrectionTarget{SpotID: "1:1"}}
-	if err := runInteractiveSpotCorrection(context.Background(), repo, correctionLookupStub{}, strings.NewReader("\n\n90\n"), &out, "1:1"); err == nil || !strings.Contains(err.Error(), "timestamped youtube.com or youtu.be") {
+	if err := runInteractiveSpotCorrection(context.Background(), repo, correctionLookupStub{}, strings.NewReader("\n\n90\n"), &out, "1:1", models.SpotSourceGeminiDirect); err == nil || !strings.Contains(err.Error(), "timestamped youtube.com or youtu.be") {
 		t.Fatalf("expected invalid timestamp error, got %v", err)
 	}
 
-	if err := runInteractiveSpotCorrection(context.Background(), repo, correctionLookupStub{err: errors.New("missing PRODUCTION_GOOGLE_MAPS_API_KEY")}, strings.NewReader("\nnew_place\n\n"), &out, "1:1"); err == nil || !strings.Contains(err.Error(), "new_place") {
+	if err := runInteractiveSpotCorrection(context.Background(), repo, correctionLookupStub{err: errors.New("missing PRODUCTION_GOOGLE_MAPS_API_KEY")}, strings.NewReader("\nnew_place\n\n"), &out, "1:1", models.SpotSourceGeminiDirect); err == nil || !strings.Contains(err.Error(), "new_place") {
 		t.Fatalf("expected place lookup error, got %v", err)
 	}
 }
