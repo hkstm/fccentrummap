@@ -946,7 +946,6 @@ func (r *Repository) getGeminiDirectSpotCorrectionTarget(spotID string) (*models
 			COALESCE(gsg.google_place_id, ''),
 			gsg.latitude,
 			gsg.longitude,
-			NULLIF(gsg.primary_type_display_name, ''),
 			COALESCE(gsm.youtube_url, ''),
 			COALESCE(s.url, ''),
 			NULLIF(p.presenter_name, ''),
