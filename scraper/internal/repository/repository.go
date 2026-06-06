@@ -14,11 +14,63 @@ import (
 	"time"
 
 	"github.com/hkstm/fccentrummap/internal/models"
+	"github.com/hkstm/fccentrummap/internal/youtube"
 	sqlite "modernc.org/sqlite"
 )
 
 type Repository struct {
 	db *sql.DB
+}
+
+const geminiDirectMinimumGeocodeConfidence = 0.9
+
+type GeminiDirectInput struct {
+	ArticleSourceID int64
+	ArticleURL      string
+	YouTubeURL      string
+}
+
+type PlaceTypeMetadata struct {
+	PrimaryType            *string
+	PrimaryTypeDisplayName *string
+}
+
+type GeminiDirectSpotMentionInput struct {
+	ArticleSourceID         int64
+	ArticleURL              string
+	YouTubeURL              string
+	Place                   string
+	Address                 *string
+	YouTubeTimestampSeconds *float64
+	Evidence                *string
+	Confidence              *float64
+	Model                   *string
+}
+
+type GeminiDirectExtractionSpot struct {
+	Place                   string
+	Address                 *string
+	YouTubeTimestampSeconds *float64
+	Evidence                string
+	Confidence              *float64
+	Model                   string
+}
+
+type GeminiDirectExtractionArticle struct {
+	ArticleSourceID int64
+	ArticleURL      string
+	YouTubeURL      string
+	PresenterName   *string
+	Model           string
+	Spots           []GeminiDirectExtractionSpot
+}
+
+type SpotCategoryMapping struct {
+	PrimaryTypeDisplayName string
+	CategoryName           string
+	Confidence             *float64
+	Reason                 *string
+	Model                  string
 }
 
 func init() {
@@ -57,64 +109,6 @@ func (r *Repository) InitSchema() error {
 		fetched_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
 
-	CREATE TABLE IF NOT EXISTS article_texts (
-		article_text_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		article_fetch_id INTEGER NOT NULL UNIQUE
-			REFERENCES article_fetches(article_fetch_id) ON DELETE CASCADE,
-		cleaned_text TEXT NOT NULL,
-		extracted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-	);
-
-	CREATE TABLE IF NOT EXISTS audio_sources (
-		audio_source_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		article_fetch_id INTEGER NOT NULL UNIQUE
-			REFERENCES article_fetches(article_fetch_id) ON DELETE CASCADE,
-		youtube_url TEXT NOT NULL,
-		audio_format TEXT NOT NULL,
-		mime_type TEXT NOT NULL,
-		audio_blob BLOB NOT NULL,
-		byte_size INTEGER NOT NULL,
-		acquired_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-	);
-
-	CREATE TABLE IF NOT EXISTS audio_transcriptions (
-		transcription_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		audio_source_id INTEGER NOT NULL
-			REFERENCES audio_sources(audio_source_id) ON DELETE CASCADE,
-		provider TEXT NOT NULL,
-		language TEXT NOT NULL,
-		http_status INTEGER NOT NULL,
-		response_json TEXT NOT NULL CHECK(json_valid(response_json)),
-		response_byte_size INTEGER NOT NULL,
-		error_message TEXT,
-		transcribed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		UNIQUE(audio_source_id, provider, language)
-	);
-
-	CREATE TABLE IF NOT EXISTS spot_mentions (
-		spot_mention_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		transcription_id INTEGER NOT NULL
-			REFERENCES audio_transcriptions(transcription_id) ON DELETE CASCADE,
-		place TEXT NOT NULL,
-		sentence_start_timestamp REAL,
-		original_sentence_start_timestamp REAL,
-		refined_sentence_start_timestamp REAL,
-		extracted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		UNIQUE(transcription_id, place)
-	);
-
-	CREATE TABLE IF NOT EXISTS spot_google_geocodes (
-		spot_google_geocode_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		spot_mention_id INTEGER NOT NULL UNIQUE
-			REFERENCES spot_mentions(spot_mention_id) ON DELETE CASCADE,
-		google_place_id TEXT,
-		latitude REAL NOT NULL,
-		longitude REAL NOT NULL,
-		formatted_address TEXT,
-		status TEXT NOT NULL,
-		geocoded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-	);
-
 	CREATE TABLE IF NOT EXISTS presenters (
 		presenter_id INTEGER PRIMARY KEY AUTOINCREMENT,
 		presenter_name TEXT NOT NULL UNIQUE,
@@ -130,16 +124,45 @@ func (r *Repository) InitSchema() error {
 		PRIMARY KEY (article_source_id, presenter_id)
 	);
 
-	CREATE TABLE IF NOT EXISTS article_spots (
+	CREATE TABLE IF NOT EXISTS gemini_direct_spot_mentions (
+		gemini_direct_spot_mention_id INTEGER PRIMARY KEY AUTOINCREMENT,
 		article_source_id INTEGER NOT NULL
 			REFERENCES article_sources(article_source_id) ON DELETE CASCADE,
-		spot_google_geocode_id INTEGER NOT NULL
-			REFERENCES spot_google_geocodes(spot_google_geocode_id) ON DELETE CASCADE,
-		linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		PRIMARY KEY (article_source_id, spot_google_geocode_id)
+		youtube_url TEXT NOT NULL,
+		place TEXT NOT NULL,
+		address TEXT,
+		youtube_timestamp_seconds REAL CHECK (youtube_timestamp_seconds IS NULL OR youtube_timestamp_seconds >= 0),
+		evidence TEXT,
+		confidence REAL CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
+		model TEXT,
+		extracted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(article_source_id, place)
 	);
 
-	CREATE TABLE IF NOT EXISTS spot_corrections (
+	CREATE TABLE IF NOT EXISTS gemini_direct_spot_google_geocodes (
+		gemini_direct_spot_google_geocode_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		gemini_direct_spot_mention_id INTEGER NOT NULL UNIQUE
+			REFERENCES gemini_direct_spot_mentions(gemini_direct_spot_mention_id) ON DELETE CASCADE,
+		google_place_id TEXT,
+		latitude REAL NOT NULL,
+		longitude REAL NOT NULL,
+		formatted_address TEXT,
+		primary_type TEXT,
+		primary_type_display_name TEXT,
+		status TEXT NOT NULL,
+		geocoded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS gemini_direct_article_spots (
+		article_source_id INTEGER NOT NULL
+			REFERENCES article_sources(article_source_id) ON DELETE CASCADE,
+		gemini_direct_spot_google_geocode_id INTEGER NOT NULL
+			REFERENCES gemini_direct_spot_google_geocodes(gemini_direct_spot_google_geocode_id) ON DELETE CASCADE,
+		linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (article_source_id, gemini_direct_spot_google_geocode_id)
+	);
+
+	CREATE TABLE IF NOT EXISTS gemini_direct_spot_corrections (
 		spot_id TEXT PRIMARY KEY CHECK (trim(spot_id) <> ''),
 		spot_name TEXT,
 		place_id TEXT,
@@ -155,6 +178,15 @@ func (r *Repository) InitSchema() error {
 		)
 	);
 
+	CREATE TABLE IF NOT EXISTS spot_category_mappings (
+		primary_type_display_name TEXT PRIMARY KEY CHECK (trim(primary_type_display_name) <> ''),
+		category_name TEXT NOT NULL CHECK (trim(category_name) <> ''),
+		confidence REAL CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
+		reason TEXT,
+		model TEXT,
+		mapped_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+
 	`
 	if _, err := r.db.Exec(schema); err != nil {
 		return fmt.Errorf("initializing schema: %w", err)
@@ -162,7 +194,10 @@ func (r *Repository) InitSchema() error {
 	if err := r.ensureArticleSourcePublishedAtColumn(); err != nil {
 		return err
 	}
-	if err := r.ensureSpotCorrectionsHiddenColumn(); err != nil {
+	if err := r.ensureGeminiDirectAddressColumn(); err != nil {
+		return err
+	}
+	if err := r.ensureGeminiDirectGeocodeTypeColumns(); err != nil {
 		return err
 	}
 	if err := r.backfillArticleSourcePublishedAt(); err != nil {
@@ -204,13 +239,48 @@ func (r *Repository) ensureArticleSourcePublishedAtColumn() error {
 	return nil
 }
 
-func (r *Repository) ensureSpotCorrectionsHiddenColumn() error {
-	rows, err := r.db.Query(`PRAGMA table_info(spot_corrections)`)
+func (r *Repository) ensureGeminiDirectAddressColumn() error {
+	exists, err := r.columnExists("gemini_direct_spot_mentions", "address")
 	if err != nil {
-		return fmt.Errorf("inspecting spot_corrections schema: %w", err)
+		return err
+	}
+	if exists {
+		return nil
+	}
+	if _, err := r.db.Exec(`ALTER TABLE gemini_direct_spot_mentions ADD COLUMN address TEXT`); err != nil {
+		return fmt.Errorf("adding gemini_direct_spot_mentions.address: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) ensureGeminiDirectGeocodeTypeColumns() error {
+	for _, col := range []struct {
+		name string
+		ddl  string
+	}{
+		{name: "primary_type", ddl: `ALTER TABLE gemini_direct_spot_google_geocodes ADD COLUMN primary_type TEXT`},
+		{name: "primary_type_display_name", ddl: `ALTER TABLE gemini_direct_spot_google_geocodes ADD COLUMN primary_type_display_name TEXT`},
+	} {
+		exists, err := r.columnExists("gemini_direct_spot_google_geocodes", col.name)
+		if err != nil {
+			return err
+		}
+		if exists {
+			continue
+		}
+		if _, err := r.db.Exec(col.ddl); err != nil {
+			return fmt.Errorf("adding gemini_direct_spot_google_geocodes.%s: %w", col.name, err)
+		}
+	}
+	return nil
+}
+
+func (r *Repository) columnExists(table, column string) (bool, error) {
+	rows, err := r.db.Query(fmt.Sprintf(`PRAGMA table_info(%s)`, table))
+	if err != nil {
+		return false, fmt.Errorf("inspecting %s schema: %w", table, err)
 	}
 	defer rows.Close()
-
 	for rows.Next() {
 		var (
 			cid       int
@@ -221,19 +291,16 @@ func (r *Repository) ensureSpotCorrectionsHiddenColumn() error {
 			primaryKY int
 		)
 		if err := rows.Scan(&cid, &name, &colType, &notNull, &defaultV, &primaryKY); err != nil {
-			return fmt.Errorf("scanning spot_corrections schema: %w", err)
+			return false, fmt.Errorf("scanning %s schema: %w", table, err)
 		}
-		if name == "hidden" {
-			return nil
+		if name == column {
+			return true, nil
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return fmt.Errorf("iterating spot_corrections schema: %w", err)
+		return false, fmt.Errorf("iterating %s schema: %w", table, err)
 	}
-	if _, err := r.db.Exec(`ALTER TABLE spot_corrections ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0 CHECK (hidden IN (0, 1))`); err != nil {
-		return fmt.Errorf("adding spot_corrections.hidden: %w", err)
-	}
-	return nil
+	return false, nil
 }
 
 func (r *Repository) backfillArticleSourcePublishedAt() error {
@@ -442,50 +509,78 @@ func formatPublishedAt(t time.Time) string {
 	return t.UTC().Format(time.RFC3339Nano)
 }
 
-func (r *Repository) UpsertArticleText(articleFetchID int64, cleanedText string) (int64, error) {
-	var articleTextID int64
-	err := r.db.QueryRow(
-		`INSERT INTO article_texts (article_fetch_id, cleaned_text)
-		 VALUES (?, ?)
-		 ON CONFLICT(article_fetch_id) DO UPDATE SET
-			cleaned_text = excluded.cleaned_text,
-			extracted_at = CURRENT_TIMESTAMP
-		 RETURNING article_text_id`,
-		articleFetchID,
-		cleanedText,
-	).Scan(&articleTextID)
-	if err != nil {
-		return 0, fmt.Errorf("upserting article_texts article_fetch_id=%d: %w", articleFetchID, err)
+func (r *Repository) UpsertGeminiDirectSpotMention(input GeminiDirectSpotMentionInput) (int64, error) {
+	place := strings.TrimSpace(input.Place)
+	if place == "" {
+		return 0, fmt.Errorf("Gemini-direct spot mention place is required")
 	}
-	return articleTextID, nil
-}
-
-func (r *Repository) UpsertSpotMention(transcriptionID int64, place string, sentenceStart, originalSentenceStart, refinedSentenceStart *float64) (int64, error) {
-	var spotMentionID int64
+	youtubeURL := strings.TrimSpace(input.YouTubeURL)
+	if youtubeURL == "" {
+		return 0, fmt.Errorf("Gemini-direct spot mention YouTube URL is required")
+	}
+	if input.ArticleSourceID <= 0 {
+		return 0, fmt.Errorf("Gemini-direct spot mention article_source_id is required")
+	}
+	var addressPtr *string
+	if input.Address != nil {
+		address := strings.TrimSpace(*input.Address)
+		if address == "" {
+			return 0, fmt.Errorf("Gemini-direct spot mention address must be non-empty when provided")
+		}
+		addressPtr = &address
+	}
+	if input.YouTubeTimestampSeconds != nil && *input.YouTubeTimestampSeconds < 0 {
+		return 0, fmt.Errorf("Gemini-direct spot mention youtube_timestamp_seconds must be >= 0")
+	}
+	if input.Confidence != nil && (*input.Confidence < 0 || *input.Confidence > 1) {
+		return 0, fmt.Errorf("Gemini-direct spot mention confidence must be between 0 and 1")
+	}
+	if strings.TrimSpace(input.ArticleURL) != "" {
+		var storedURL string
+		if err := r.db.QueryRow(`SELECT url FROM article_sources WHERE article_source_id = ?`, input.ArticleSourceID).Scan(&storedURL); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return 0, fmt.Errorf("Gemini-direct article_source_id=%d not found", input.ArticleSourceID)
+			}
+			return 0, fmt.Errorf("querying article_source_id=%d: %w", input.ArticleSourceID, err)
+		}
+		if strings.TrimSpace(storedURL) != strings.TrimSpace(input.ArticleURL) {
+			return 0, fmt.Errorf("Gemini-direct article URL mismatch for article_source_id=%d", input.ArticleSourceID)
+		}
+	}
+	var id int64
 	err := r.db.QueryRow(
-		`INSERT INTO spot_mentions (
-			transcription_id,
+		`INSERT INTO gemini_direct_spot_mentions (
+			article_source_id,
+			youtube_url,
 			place,
-			sentence_start_timestamp,
-			original_sentence_start_timestamp,
-			refined_sentence_start_timestamp
-		 ) VALUES (?, ?, ?, ?, ?)
-		 ON CONFLICT(transcription_id, place) DO UPDATE SET
-			sentence_start_timestamp = excluded.sentence_start_timestamp,
-			original_sentence_start_timestamp = excluded.original_sentence_start_timestamp,
-			refined_sentence_start_timestamp = excluded.refined_sentence_start_timestamp,
+			address,
+			youtube_timestamp_seconds,
+			evidence,
+			confidence,
+			model
+		 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(article_source_id, place) DO UPDATE SET
+			youtube_url = excluded.youtube_url,
+			address = excluded.address,
+			youtube_timestamp_seconds = excluded.youtube_timestamp_seconds,
+			evidence = excluded.evidence,
+			confidence = excluded.confidence,
+			model = excluded.model,
 			extracted_at = CURRENT_TIMESTAMP
-		 RETURNING spot_mention_id`,
-		transcriptionID,
+		 RETURNING gemini_direct_spot_mention_id`,
+		input.ArticleSourceID,
+		youtubeURL,
 		place,
-		sentenceStart,
-		originalSentenceStart,
-		refinedSentenceStart,
-	).Scan(&spotMentionID)
+		addressPtr,
+		input.YouTubeTimestampSeconds,
+		input.Evidence,
+		input.Confidence,
+		input.Model,
+	).Scan(&id)
 	if err != nil {
-		return 0, fmt.Errorf("upserting spot_mentions transcription_id=%d place=%s: %w", transcriptionID, place, err)
+		return 0, fmt.Errorf("upserting gemini_direct_spot_mentions article_source_id=%d place=%s: %w", input.ArticleSourceID, place, err)
 	}
-	return spotMentionID, nil
+	return id, nil
 }
 
 func (r *Repository) UpsertPresenter(name string) (int64, error) {
@@ -517,330 +612,109 @@ func (r *Repository) LinkArticlePresenter(articleSourceID, presenterID int64) er
 	return nil
 }
 
-func (r *Repository) UpsertSpotGoogleGeocode(spotMentionID int64, googlePlaceID *string, latitude, longitude float64, formattedAddress *string, status string) (int64, error) {
-	var spotGoogleGeocodeID int64
-	err := r.db.QueryRow(
-		`INSERT INTO spot_google_geocodes (
-			spot_mention_id,
-			google_place_id,
-			latitude,
-			longitude,
-			formatted_address,
-			status
-		 ) VALUES (?, ?, ?, ?, ?, ?)
-		 ON CONFLICT(spot_mention_id) DO UPDATE SET
-			google_place_id = excluded.google_place_id,
-			latitude = excluded.latitude,
-			longitude = excluded.longitude,
-			formatted_address = excluded.formatted_address,
-			status = excluded.status,
-			geocoded_at = CURRENT_TIMESTAMP
-		 RETURNING spot_google_geocode_id`,
-		spotMentionID,
-		googlePlaceID,
-		latitude,
-		longitude,
-		formattedAddress,
-		status,
-	).Scan(&spotGoogleGeocodeID)
-	if err != nil {
-		return 0, fmt.Errorf("upserting spot_google_geocodes spot_mention_id=%d: %w", spotMentionID, err)
-	}
-	return spotGoogleGeocodeID, nil
-}
-
-func (r *Repository) UpsertAudioSource(articleFetchID int64, youtubeURL, audioFormat, mimeType string, audioBlob []byte) (int64, error) {
-	var audioSourceID int64
-	err := r.db.QueryRow(
-		`INSERT INTO audio_sources (article_fetch_id, youtube_url, audio_format, mime_type, audio_blob, byte_size)
-		 VALUES (?, ?, ?, ?, ?, ?)
-		 ON CONFLICT(article_fetch_id) DO UPDATE SET
-			youtube_url = excluded.youtube_url,
-			audio_format = excluded.audio_format,
-			mime_type = excluded.mime_type,
-			audio_blob = excluded.audio_blob,
-			byte_size = excluded.byte_size,
-			acquired_at = CURRENT_TIMESTAMP
-		 RETURNING audio_source_id`,
-		articleFetchID,
-		youtubeURL,
-		audioFormat,
-		mimeType,
-		audioBlob,
-		len(audioBlob),
-	).Scan(&audioSourceID)
-	if err != nil {
-		return 0, fmt.Errorf("upserting audio_sources article_fetch_id=%d: %w", articleFetchID, err)
-	}
-	return audioSourceID, nil
-}
-
-func (r *Repository) GetLatestAudioSource() (*models.ArticleAudioSource, error) {
-	var src models.ArticleAudioSource
-	err := r.db.QueryRow(
-		`SELECT audio_source_id, article_fetch_id, youtube_url, audio_format, mime_type, audio_blob, byte_size, acquired_at
-		 FROM audio_sources
-		 WHERE audio_blob IS NOT NULL AND length(audio_blob) > 0
-		 ORDER BY audio_source_id DESC
-		 LIMIT 1`,
-	).Scan(
-		&src.AudioSourceID,
-		&src.ArticleRawID,
-		&src.YouTubeURL,
-		&src.AudioFormat,
-		&src.MIMEType,
-		&src.AudioBlob,
-		&src.ByteSize,
-		&src.CreatedAt,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("querying latest audio_sources: %w", err)
-	}
-	return &src, nil
-}
-
-func (r *Repository) ListAudioSourcesPendingTranscription() ([]models.ArticleAudioSource, error) {
-	rows, err := r.db.Query(
-		`SELECT s.audio_source_id, s.article_fetch_id, s.youtube_url, s.audio_format, s.mime_type, s.audio_blob, s.byte_size, s.acquired_at
-		 FROM audio_sources s
-		 LEFT JOIN audio_transcriptions t ON t.audio_source_id = s.audio_source_id
-		 WHERE s.audio_blob IS NOT NULL AND length(s.audio_blob) > 0
-		   AND t.transcription_id IS NULL
-		 ORDER BY s.audio_source_id ASC`,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("querying pending audio_sources: %w", err)
-	}
-	defer rows.Close()
-	var out []models.ArticleAudioSource
-
-	for rows.Next() {
-		var src models.ArticleAudioSource
-		if err := rows.Scan(
-			&src.AudioSourceID,
-			&src.ArticleRawID,
-			&src.YouTubeURL,
-			&src.AudioFormat,
-			&src.MIMEType,
-			&src.AudioBlob,
-			&src.ByteSize,
-			&src.CreatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("scanning pending article audio sources: %w", err)
-		}
-		out = append(out, src)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating pending article audio sources: %w", err)
-	}
-	return out, nil
-}
-
-func (r *Repository) UpsertAudioTranscription(t models.ArticleAudioTranscription) (int64, error) {
-	var transcriptionID int64
-	err := r.db.QueryRow(
-		`INSERT INTO audio_transcriptions
-			(audio_source_id, provider, language, http_status, response_json, response_byte_size, error_message)
-		 VALUES (?, ?, ?, ?, json(?), ?, ?)
-		 ON CONFLICT(audio_source_id, provider, language) DO UPDATE SET
-			http_status = excluded.http_status,
-			response_json = excluded.response_json,
-			response_byte_size = excluded.response_byte_size,
-			error_message = excluded.error_message,
-			transcribed_at = CURRENT_TIMESTAMP
-		 RETURNING transcription_id`,
-		t.AudioSourceID,
-		t.Provider,
-		t.Language,
-		t.HTTPStatus,
-		t.ResponseJSON,
-		t.ResponseByteSize,
-		t.ErrorMessage,
-	).Scan(&transcriptionID)
-	if err != nil {
-		return 0, fmt.Errorf("upserting audio_transcriptions audio_source_id=%d provider=%s language=%s: %w", t.AudioSourceID, t.Provider, t.Language, err)
-	}
-	return transcriptionID, nil
-}
-
-func (r *Repository) GetLatestAudioTranscription() (*models.ArticleAudioTranscription, error) {
-	var t models.ArticleAudioTranscription
-	var errMsg sql.NullString
-	err := r.db.QueryRow(
-		`SELECT transcription_id, audio_source_id, provider, language, http_status, response_json, response_byte_size, error_message, transcribed_at
-		 FROM audio_transcriptions
-		 ORDER BY transcription_id DESC
-		 LIMIT 1`,
-	).Scan(&t.TranscriptionID, &t.AudioSourceID, &t.Provider, &t.Language, &t.HTTPStatus, &t.ResponseJSON, &t.ResponseByteSize, &errMsg, &t.CreatedAt)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("querying latest audio_transcriptions: %w", err)
-	}
-	if errMsg.Valid {
-		t.ErrorMessage = &errMsg.String
-	}
-	return &t, nil
-}
-
-func (r *Repository) GetArticleContextByTranscriptionID(transcriptionID int64) (string, int64, string, error) {
-	var articleURL string
-	var articleSourceID int64
-	var cleanedText string
-	err := r.db.QueryRow(
-		`SELECT s.url, s.article_source_id, t.cleaned_text
-		 FROM audio_transcriptions tr
-		 JOIN audio_sources au ON au.audio_source_id = tr.audio_source_id
-		 JOIN article_fetches f ON f.article_fetch_id = au.article_fetch_id
-		 JOIN article_sources s ON s.article_source_id = f.article_source_id
-		 JOIN article_texts t ON t.article_fetch_id = f.article_fetch_id
-		 WHERE tr.transcription_id = ?`,
-		transcriptionID,
-	).Scan(&articleURL, &articleSourceID, &cleanedText)
-	if err != nil {
-		return "", 0, "", fmt.Errorf("querying article context by transcription_id=%d: %w", transcriptionID, err)
-	}
-	return articleURL, articleSourceID, cleanedText, nil
-}
-
-func (r *Repository) ListTranscriptionsPendingExtraction() ([]models.ArticleAudioTranscription, error) {
-	rows, err := r.db.Query(
-		`SELECT tr.transcription_id, tr.audio_source_id, tr.provider, tr.language, tr.http_status, tr.response_json, tr.response_byte_size, tr.error_message, tr.transcribed_at
-		 FROM audio_transcriptions tr
-		 JOIN audio_sources au ON au.audio_source_id = tr.audio_source_id
-		 JOIN article_fetches f ON f.article_fetch_id = au.article_fetch_id
-		 WHERE NOT EXISTS (
-			 SELECT 1 FROM spot_mentions sm WHERE sm.transcription_id = tr.transcription_id
-		 ) AND NOT EXISTS (
-			 SELECT 1 FROM article_presenters ap WHERE ap.article_source_id = f.article_source_id
-		 )
-		 ORDER BY tr.transcription_id ASC`,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("querying pending transcriptions: %w", err)
-	}
-	defer rows.Close()
-
-	var results []models.ArticleAudioTranscription
-	for rows.Next() {
-		var t models.ArticleAudioTranscription
-		var errMsg sql.NullString
-		err := rows.Scan(&t.TranscriptionID, &t.AudioSourceID, &t.Provider, &t.Language, &t.HTTPStatus, &t.ResponseJSON, &t.ResponseByteSize, &errMsg, &t.CreatedAt)
-		if err != nil {
-			return nil, fmt.Errorf("scanning pending transcription: %w", err)
-		}
-		if errMsg.Valid {
-			t.ErrorMessage = &errMsg.String
-		}
-		results = append(results, t)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating pending transcriptions: %w", err)
-	}
-	return results, nil
-}
-
 type SpotMentionForGeocode struct {
-	SpotMentionID   int64
-	ArticleSourceID int64
-	Place           string
+	SpotMentionID           int64
+	ArticleSourceID         int64
+	Place                   string
+	Address                 *string
+	YouTubeURL              string
+	YouTubeTimestampSeconds *float64
 }
 
-func (r *Repository) ListSpotMentionsWithoutGeocode() ([]SpotMentionForGeocode, error) {
+func (r *Repository) ListSpotMentionsWithoutGeocodeForSource(source models.SpotSource) ([]SpotMentionForGeocode, error) {
+	if _, err := models.NormalizeSpotSource(string(source)); err != nil {
+		return nil, err
+	}
 	rows, err := r.db.Query(
-		`SELECT sm.spot_mention_id, f.article_source_id, sm.place
-		 FROM spot_mentions sm
-		 JOIN audio_transcriptions tr ON tr.transcription_id = sm.transcription_id
-		 JOIN audio_sources au ON au.audio_source_id = tr.audio_source_id
-		 JOIN article_fetches f ON f.article_fetch_id = au.article_fetch_id
-		 LEFT JOIN spot_google_geocodes sg ON sg.spot_mention_id = sm.spot_mention_id
-		 WHERE sg.spot_google_geocode_id IS NULL
-		 ORDER BY sm.spot_mention_id ASC`,
-	)
+		`SELECT gsm.gemini_direct_spot_mention_id, gsm.article_source_id, gsm.place, gsm.address, gsm.youtube_url, gsm.youtube_timestamp_seconds
+		 FROM gemini_direct_spot_mentions gsm
+		 LEFT JOIN gemini_direct_spot_google_geocodes gsg ON gsg.gemini_direct_spot_mention_id = gsm.gemini_direct_spot_mention_id
+		 WHERE gsg.gemini_direct_spot_google_geocode_id IS NULL
+		 ORDER BY gsm.gemini_direct_spot_mention_id ASC`)
 	if err != nil {
-		return nil, fmt.Errorf("querying spot_mentions without geocode: %w", err)
+		return nil, fmt.Errorf("querying Gemini-direct spot mentions without geocode: %w", err)
 	}
 	defer rows.Close()
 	out := []SpotMentionForGeocode{}
 	for rows.Next() {
-		var r SpotMentionForGeocode
-		if err := rows.Scan(&r.SpotMentionID, &r.ArticleSourceID, &r.Place); err != nil {
-			return nil, fmt.Errorf("scanning spot mention without geocode: %w", err)
+		var row SpotMentionForGeocode
+		var ts sql.NullFloat64
+		var address sql.NullString
+		if err := rows.Scan(&row.SpotMentionID, &row.ArticleSourceID, &row.Place, &address, &row.YouTubeURL, &ts); err != nil {
+			return nil, fmt.Errorf("scanning Gemini-direct spot mention without geocode: %w", err)
 		}
-		out = append(out, r)
+		if ts.Valid {
+			row.YouTubeTimestampSeconds = &ts.Float64
+		}
+		if address.Valid && strings.TrimSpace(address.String) != "" {
+			addr := strings.TrimSpace(address.String)
+			row.Address = &addr
+		}
+		out = append(out, row)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating spot mention without geocode: %w", err)
+		return nil, fmt.Errorf("iterating Gemini-direct spot mentions without geocode: %w", err)
 	}
 	return out, nil
 }
 
-func (r *Repository) LinkArticleSpot(articleSourceID, spotGoogleGeocodeID int64) error {
-	_, err := r.db.Exec(
-		`INSERT OR IGNORE INTO article_spots (article_source_id, spot_google_geocode_id)
-		 VALUES (?, ?)`,
-		articleSourceID,
-		spotGoogleGeocodeID,
-	)
-	if err != nil {
-		return fmt.Errorf("linking article_spots article_source_id=%d spot_google_geocode_id=%d: %w", articleSourceID, spotGoogleGeocodeID, err)
+func (r *Repository) UpsertSpotGoogleGeocodeAndLinkArticleSpotForSource(source models.SpotSource, mentionID int64, googlePlaceID *string, latitude, longitude float64, formattedAddress *string, status string, articleSourceID int64, metadata PlaceTypeMetadata) (int64, error) {
+	if _, err := models.NormalizeSpotSource(string(source)); err != nil {
+		return 0, err
 	}
-	return nil
-}
-
-func (r *Repository) UpsertSpotGoogleGeocodeAndLinkArticleSpot(spotMentionID int64, googlePlaceID *string, latitude, longitude float64, formattedAddress *string, status string, articleSourceID int64) (int64, error) {
 	tx, err := r.db.BeginTx(context.Background(), nil)
 	if err != nil {
-		return 0, fmt.Errorf("begin geocode/article_spot tx: %w", err)
+		return 0, fmt.Errorf("begin Gemini-direct geocode/article_spot tx: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	var spotGoogleGeocodeID int64
+	var geocodeID int64
 	err = tx.QueryRow(
-		`INSERT INTO spot_google_geocodes (
-			spot_mention_id,
+		`INSERT INTO gemini_direct_spot_google_geocodes (
+			gemini_direct_spot_mention_id,
 			google_place_id,
 			latitude,
 			longitude,
 			formatted_address,
+			primary_type,
+			primary_type_display_name,
 			status
-		 ) VALUES (?, ?, ?, ?, ?, ?)
-		 ON CONFLICT(spot_mention_id) DO UPDATE SET
+		 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(gemini_direct_spot_mention_id) DO UPDATE SET
 			google_place_id = excluded.google_place_id,
 			latitude = excluded.latitude,
 			longitude = excluded.longitude,
 			formatted_address = excluded.formatted_address,
+			primary_type = excluded.primary_type,
+			primary_type_display_name = excluded.primary_type_display_name,
 			status = excluded.status,
 			geocoded_at = CURRENT_TIMESTAMP
-		 RETURNING spot_google_geocode_id`,
-		spotMentionID,
+		 RETURNING gemini_direct_spot_google_geocode_id`,
+		mentionID,
 		googlePlaceID,
 		latitude,
 		longitude,
 		formattedAddress,
+		metadata.PrimaryType,
+		metadata.PrimaryTypeDisplayName,
 		status,
-	).Scan(&spotGoogleGeocodeID)
+	).Scan(&geocodeID)
 	if err != nil {
-		return 0, fmt.Errorf("upserting spot_google_geocodes spot_mention_id=%d: %w", spotMentionID, err)
+		return 0, fmt.Errorf("upserting gemini_direct_spot_google_geocodes gemini_direct_spot_mention_id=%d: %w", mentionID, err)
 	}
 
 	if _, err := tx.Exec(
-		`INSERT OR IGNORE INTO article_spots (article_source_id, spot_google_geocode_id)
+		`INSERT OR IGNORE INTO gemini_direct_article_spots (article_source_id, gemini_direct_spot_google_geocode_id)
 		 VALUES (?, ?)`,
 		articleSourceID,
-		spotGoogleGeocodeID,
+		geocodeID,
 	); err != nil {
-		return 0, fmt.Errorf("linking article_spots article_source_id=%d spot_google_geocode_id=%d: %w", articleSourceID, spotGoogleGeocodeID, err)
+		return 0, fmt.Errorf("linking gemini_direct_article_spots article_source_id=%d geocode_id=%d: %w", articleSourceID, geocodeID, err)
 	}
-
 	if err := tx.Commit(); err != nil {
-		return 0, fmt.Errorf("commit geocode/article_spot tx: %w", err)
+		return 0, fmt.Errorf("commit Gemini-direct geocode/article_spot tx: %w", err)
 	}
-	return spotGoogleGeocodeID, nil
+	return geocodeID, nil
 }
 
 func (r *Repository) UpsertArticleSource(url string) (int64, error) {
@@ -928,27 +802,65 @@ func (r *Repository) ListArticleFetches() ([]models.ArticleFetch, error) {
 	return out, nil
 }
 
+func (r *Repository) ListGeminiDirectInputs() ([]GeminiDirectInput, error) {
+	rows, err := r.db.Query(`
+		SELECT s.article_source_id, COALESCE(s.url, ''), COALESCE(f.html, '')
+		FROM article_sources s
+		LEFT JOIN article_fetches f ON f.article_source_id = s.article_source_id
+		ORDER BY s.article_source_id ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("querying Gemini-direct inputs: %w", err)
+	}
+	defer rows.Close()
+
+	var out []GeminiDirectInput
+	for rows.Next() {
+		var row GeminiDirectInput
+		var html string
+		if err := rows.Scan(&row.ArticleSourceID, &row.ArticleURL, &html); err != nil {
+			return nil, fmt.Errorf("scanning Gemini-direct input: %w", err)
+		}
+		if strings.TrimSpace(row.YouTubeURL) == "" {
+			if videoID, ok := youtube.ExtractVideoID(html); ok {
+				row.YouTubeURL = youtube.WatchURL(videoID)
+			}
+		}
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating Gemini-direct inputs: %w", err)
+	}
+	return out, nil
+}
+
 func StableSpotID(articleSourceID, spotMentionID int64) string {
 	return fmt.Sprintf("%d:%d", articleSourceID, spotMentionID)
 }
 
-func (r *Repository) GetSpotCorrection(spotID string) (*models.SpotCorrection, error) {
+func (r *Repository) GetSpotCorrectionForSource(source models.SpotSource, spotID string) (*models.SpotCorrection, error) {
+	if _, err := models.NormalizeSpotSource(string(source)); err != nil {
+		return nil, err
+	}
+	return r.getSpotCorrectionFromTable("gemini_direct_spot_corrections", spotID)
+}
+
+func (r *Repository) getSpotCorrectionFromTable(table, spotID string) (*models.SpotCorrection, error) {
 	var c models.SpotCorrection
 	var spotName, placeID sql.NullString
 	var lat, lng sql.NullFloat64
 	var ts sql.NullInt64
 	var hidden sql.NullBool
 	err := r.db.QueryRow(
-		`SELECT spot_id, spot_name, place_id, latitude, longitude, youtube_timestamp_seconds, hidden, created_at, updated_at
-		 FROM spot_corrections
-		 WHERE spot_id = ?`,
+		fmt.Sprintf(`SELECT spot_id, spot_name, place_id, latitude, longitude, youtube_timestamp_seconds, hidden, created_at, updated_at
+		 FROM %s
+		 WHERE spot_id = ?`, table),
 		strings.TrimSpace(spotID),
 	).Scan(&c.SpotID, &spotName, &placeID, &lat, &lng, &ts, &hidden, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("querying spot correction spot_id=%s: %w", spotID, err)
+		return nil, fmt.Errorf("querying %s spot_id=%s: %w", table, spotID, err)
 	}
 	if spotName.Valid {
 		c.SpotName = &spotName.String
@@ -971,7 +883,14 @@ func (r *Repository) GetSpotCorrection(spotID string) (*models.SpotCorrection, e
 	return &c, nil
 }
 
-func (r *Repository) UpsertSpotCorrection(c models.SpotCorrection) error {
+func (r *Repository) UpsertSpotCorrectionForSource(source models.SpotSource, c models.SpotCorrection) error {
+	if _, err := models.NormalizeSpotSource(string(source)); err != nil {
+		return err
+	}
+	return r.upsertSpotCorrectionIntoTable("gemini_direct_spot_corrections", c)
+}
+
+func (r *Repository) upsertSpotCorrectionIntoTable(table string, c models.SpotCorrection) error {
 	spotID := strings.TrimSpace(c.SpotID)
 	if spotID == "" {
 		return fmt.Errorf("spot correction spot_id is required")
@@ -988,7 +907,7 @@ func (r *Repository) UpsertSpotCorrection(c models.SpotCorrection) error {
 		return fmt.Errorf("spot correction place_id and coordinates must be provided together")
 	}
 	_, err := r.db.Exec(
-		`INSERT INTO spot_corrections (spot_id, spot_name, place_id, latitude, longitude, youtube_timestamp_seconds, hidden)
+		fmt.Sprintf(`INSERT INTO %s (spot_id, spot_name, place_id, latitude, longitude, youtube_timestamp_seconds, hidden)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(spot_id) DO UPDATE SET
 			spot_name = excluded.spot_name,
@@ -997,7 +916,7 @@ func (r *Repository) UpsertSpotCorrection(c models.SpotCorrection) error {
 			longitude = excluded.longitude,
 			youtube_timestamp_seconds = excluded.youtube_timestamp_seconds,
 			hidden = excluded.hidden,
-			updated_at = CURRENT_TIMESTAMP`,
+			updated_at = CURRENT_TIMESTAMP`, table),
 		spotID,
 		c.SpotName,
 		c.PlaceID,
@@ -1007,49 +926,53 @@ func (r *Repository) UpsertSpotCorrection(c models.SpotCorrection) error {
 		c.Hidden,
 	)
 	if err != nil {
-		return fmt.Errorf("upserting spot correction spot_id=%s: %w", spotID, err)
+		return fmt.Errorf("upserting %s spot_id=%s: %w", table, spotID, err)
 	}
 	return nil
 }
 
-func (r *Repository) GetSpotCorrectionTarget(spotID string) (*models.SpotCorrectionTarget, error) {
+func (r *Repository) GetSpotCorrectionTargetForSource(source models.SpotSource, spotID string) (*models.SpotCorrectionTarget, error) {
+	if _, err := models.NormalizeSpotSource(string(source)); err != nil {
+		return nil, err
+	}
+	return r.getGeminiDirectSpotCorrectionTarget(spotID)
+}
+
+func (r *Repository) getGeminiDirectSpotCorrectionTarget(spotID string) (*models.SpotCorrectionTarget, error) {
 	row := r.db.QueryRow(`
 		SELECT
-			CAST(asp.article_source_id AS TEXT) || ':' || CAST(sm.spot_mention_id AS TEXT),
-			COALESCE(sm.place, ''),
-			COALESCE(sgg.google_place_id, ''),
-			sgg.latitude,
-			sgg.longitude,
-			COALESCE(aus.youtube_url, ''),
+			CAST(gasp.article_source_id AS TEXT) || ':' || CAST(gsm.gemini_direct_spot_mention_id AS TEXT),
+			COALESCE(gsm.place, ''),
+			COALESCE(gsg.google_place_id, ''),
+			gsg.latitude,
+			gsg.longitude,
+			NULLIF(gsg.primary_type_display_name, ''),
+			COALESCE(gsm.youtube_url, ''),
 			COALESCE(s.url, ''),
 			NULLIF(p.presenter_name, ''),
-			sm.refined_sentence_start_timestamp,
-			sm.original_sentence_start_timestamp,
-			sm.sentence_start_timestamp,
-			sc.spot_name,
-			sc.place_id,
-			sc.latitude,
-			sc.longitude,
-			sc.youtube_timestamp_seconds,
-			sc.hidden,
-			sc.created_at,
-			sc.updated_at
-		FROM article_spots asp
-		JOIN spot_google_geocodes sgg ON sgg.spot_google_geocode_id = asp.spot_google_geocode_id
-		JOIN spot_mentions sm ON sm.spot_mention_id = sgg.spot_mention_id
-		JOIN audio_transcriptions tr ON tr.transcription_id = sm.transcription_id
-		JOIN audio_sources aus ON aus.audio_source_id = tr.audio_source_id
-		JOIN article_sources s ON s.article_source_id = asp.article_source_id
-		LEFT JOIN article_presenters ap ON ap.article_source_id = asp.article_source_id
+			gsm.youtube_timestamp_seconds,
+			gc.spot_name,
+			gc.place_id,
+			gc.latitude,
+			gc.longitude,
+			gc.youtube_timestamp_seconds,
+			gc.hidden,
+			gc.created_at,
+			gc.updated_at
+		FROM gemini_direct_article_spots gasp
+		JOIN gemini_direct_spot_google_geocodes gsg ON gsg.gemini_direct_spot_google_geocode_id = gasp.gemini_direct_spot_google_geocode_id
+		JOIN gemini_direct_spot_mentions gsm ON gsm.gemini_direct_spot_mention_id = gsg.gemini_direct_spot_mention_id
+		JOIN article_sources s ON s.article_source_id = gasp.article_source_id
+		LEFT JOIN article_presenters ap ON ap.article_source_id = gasp.article_source_id
 		LEFT JOIN presenters p ON p.presenter_id = ap.presenter_id
-		LEFT JOIN spot_corrections sc ON sc.spot_id = CAST(asp.article_source_id AS TEXT) || ':' || CAST(sm.spot_mention_id AS TEXT)
-		WHERE CAST(asp.article_source_id AS TEXT) || ':' || CAST(sm.spot_mention_id AS TEXT) = ?`,
+		LEFT JOIN gemini_direct_spot_corrections gc ON gc.spot_id = CAST(gasp.article_source_id AS TEXT) || ':' || CAST(gsm.gemini_direct_spot_mention_id AS TEXT)
+		WHERE CAST(gasp.article_source_id AS TEXT) || ':' || CAST(gsm.gemini_direct_spot_mention_id AS TEXT) = ?`,
 		strings.TrimSpace(spotID),
 	)
 
 	var target models.SpotCorrectionTarget
 	var presenterName sql.NullString
-	var refinedTS, originalTS, sentenceStartTS sql.NullFloat64
+	var sourceTS sql.NullFloat64
 	var cSpotName, cPlaceID sql.NullString
 	var cLat, cLng sql.NullFloat64
 	var cTimestamp sql.NullInt64
@@ -1064,9 +987,7 @@ func (r *Repository) GetSpotCorrectionTarget(spotID string) (*models.SpotCorrect
 		&target.SourceYouTubeLink,
 		&target.ArticleURL,
 		&presenterName,
-		&refinedTS,
-		&originalTS,
-		&sentenceStartTS,
+		&sourceTS,
 		&cSpotName,
 		&cPlaceID,
 		&cLat,
@@ -1079,111 +1000,184 @@ func (r *Repository) GetSpotCorrectionTarget(spotID string) (*models.SpotCorrect
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("querying spot correction target spot_id=%s: %w", spotID, err)
+		return nil, fmt.Errorf("querying Gemini-direct spot correction target spot_id=%s: %w", spotID, err)
 	}
 	if presenterName.Valid {
 		target.PresenterName = presenterName.String
 	}
-	target.SourceYouTubeTimestampSecs = pickedTimestampSeconds(refinedTS, originalTS, sentenceStartTS)
+	target.SourceYouTubeTimestampSecs = pickedTimestampSeconds(sourceTS, sql.NullFloat64{}, sql.NullFloat64{})
 	target.EffectiveSpotName = target.SourceSpotName
 	target.EffectivePlaceID = target.SourcePlaceID
 	target.EffectiveLatitude = target.SourceLatitude
 	target.EffectiveLongitude = target.SourceLongitude
 	target.EffectiveYouTubeTimestampSecs = target.SourceYouTubeTimestampSecs
-	target.EffectiveYouTubeLink = withYouTubeTimestamp(target.SourceYouTubeLink, refinedTS, originalTS, sentenceStartTS)
-
-	if cSpotName.Valid || cPlaceID.Valid || cLat.Valid || cLng.Valid || cTimestamp.Valid || cHidden.Valid {
-		correction := &models.SpotCorrection{SpotID: target.SpotID}
-		if cSpotName.Valid {
-			correction.SpotName = &cSpotName.String
-			target.EffectiveSpotName = cSpotName.String
-		}
-		if cPlaceID.Valid {
-			correction.PlaceID = &cPlaceID.String
-			if strings.TrimSpace(cPlaceID.String) != "" {
-				target.EffectivePlaceID = cPlaceID.String
-			}
-		}
-		if cLat.Valid {
-			correction.Latitude = &cLat.Float64
-			target.EffectiveLatitude = cLat.Float64
-		}
-		if cLng.Valid {
-			correction.Longitude = &cLng.Float64
-			target.EffectiveLongitude = cLng.Float64
-		}
-		if cTimestamp.Valid {
-			correction.YouTubeTimestampSeconds = &cTimestamp.Int64
-			target.EffectiveYouTubeTimestampSecs = &cTimestamp.Int64
-			if cTimestamp.Int64 >= 0 {
-				target.EffectiveYouTubeLink = withYouTubeTimestampSeconds(target.SourceYouTubeLink, cTimestamp.Int64)
-			}
-		}
-		if cHidden.Valid {
-			correction.Hidden = cHidden.Bool
-		}
-		if cCreated.Valid {
-			correction.CreatedAt = cCreated.Time
-		}
-		if cUpdated.Valid {
-			correction.UpdatedAt = cUpdated.Time
-		}
-		target.Correction = correction
-	}
-
+	target.EffectiveYouTubeLink = withYouTubeTimestamp(target.SourceYouTubeLink, sourceTS, sql.NullFloat64{}, sql.NullFloat64{})
+	applyCorrectionToTarget(&target, cSpotName, cPlaceID, cLat, cLng, cTimestamp, cHidden, cCreated, cUpdated)
 	return &target, nil
 }
 
-func (r *Repository) ExportData() (*models.ExportData, error) {
+func applyCorrectionToTarget(target *models.SpotCorrectionTarget, cSpotName, cPlaceID sql.NullString, cLat, cLng sql.NullFloat64, cTimestamp sql.NullInt64, cHidden sql.NullBool, cCreated, cUpdated sql.NullTime) {
+	if !(cSpotName.Valid || cPlaceID.Valid || cLat.Valid || cLng.Valid || cTimestamp.Valid || cHidden.Valid) {
+		return
+	}
+	correction := &models.SpotCorrection{SpotID: target.SpotID}
+	if cSpotName.Valid {
+		correction.SpotName = &cSpotName.String
+		target.EffectiveSpotName = cSpotName.String
+	}
+	if cPlaceID.Valid {
+		correction.PlaceID = &cPlaceID.String
+		if strings.TrimSpace(cPlaceID.String) != "" {
+			target.EffectivePlaceID = cPlaceID.String
+		}
+	}
+	if cLat.Valid {
+		correction.Latitude = &cLat.Float64
+		target.EffectiveLatitude = cLat.Float64
+	}
+	if cLng.Valid {
+		correction.Longitude = &cLng.Float64
+		target.EffectiveLongitude = cLng.Float64
+	}
+	if cTimestamp.Valid {
+		correction.YouTubeTimestampSeconds = &cTimestamp.Int64
+		target.EffectiveYouTubeTimestampSecs = &cTimestamp.Int64
+		if cTimestamp.Int64 >= 0 {
+			target.EffectiveYouTubeLink = withYouTubeTimestampSeconds(target.SourceYouTubeLink, cTimestamp.Int64)
+		}
+	}
+	if cHidden.Valid {
+		correction.Hidden = cHidden.Bool
+	}
+	if cCreated.Valid {
+		correction.CreatedAt = cCreated.Time
+	}
+	if cUpdated.Valid {
+		correction.UpdatedAt = cUpdated.Time
+	}
+	target.Correction = correction
+}
+
+func (r *Repository) ListDistinctPrimaryTypeDisplayNames() ([]string, error) {
 	rows, err := r.db.Query(`
-		SELECT
-			CAST(asp.article_source_id AS TEXT) || ':' || CAST(sm.spot_mention_id AS TEXT),
-			COALESCE(sgg.google_place_id, ''),
-			COALESCE(sm.place, ''),
-			NULLIF(p.presenter_name, ''),
-			sgg.latitude,
-			sgg.longitude,
-			COALESCE(aus.youtube_url, ''),
-			COALESCE(s.url, ''),
-			s.published_at,
-			sm.refined_sentence_start_timestamp,
-			sm.original_sentence_start_timestamp,
-			sm.sentence_start_timestamp,
-			sc.spot_name,
-			sc.place_id,
-			sc.latitude,
-			sc.longitude,
-			sc.youtube_timestamp_seconds
-		FROM article_spots asp
-		JOIN spot_google_geocodes sgg ON sgg.spot_google_geocode_id = asp.spot_google_geocode_id
-		JOIN spot_mentions sm ON sm.spot_mention_id = sgg.spot_mention_id
-		JOIN audio_transcriptions tr ON tr.transcription_id = sm.transcription_id
-		JOIN audio_sources aus ON aus.audio_source_id = tr.audio_source_id
-		JOIN article_sources s ON s.article_source_id = asp.article_source_id
-		LEFT JOIN article_presenters ap ON ap.article_source_id = asp.article_source_id
-		LEFT JOIN presenters p ON p.presenter_id = ap.presenter_id
-		LEFT JOIN spot_corrections sc ON sc.spot_id = CAST(asp.article_source_id AS TEXT) || ':' || CAST(sm.spot_mention_id AS TEXT)
-		WHERE COALESCE(sc.hidden, 0) = 0
-	`)
+		SELECT DISTINCT trim(primary_type_display_name)
+		FROM gemini_direct_spot_google_geocodes
+		WHERE primary_type_display_name IS NOT NULL AND trim(primary_type_display_name) <> ''
+		ORDER BY trim(primary_type_display_name) ASC`)
 	if err != nil {
-		return nil, fmt.Errorf("querying export data: %w", err)
+		return nil, fmt.Errorf("querying distinct primary type display names: %w", err)
 	}
 	defer rows.Close()
 
-	data := &models.ExportData{
-		Spots:      []models.ExportSpot{},
-		Presenters: []models.ExportPresenter{},
+	var names []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, fmt.Errorf("scanning primary type display name: %w", err)
+		}
+		names = append(names, name)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating primary type display names: %w", err)
+	}
+	return names, nil
+}
+
+func (r *Repository) ReplaceSpotCategoryMappings(mappings []SpotCategoryMapping) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin category mapping replacement: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.Exec(`DELETE FROM spot_category_mappings`); err != nil {
+		return fmt.Errorf("clearing spot_category_mappings: %w", err)
+	}
+	stmt, err := tx.Prepare(`
+		INSERT INTO spot_category_mappings (primary_type_display_name, category_name, confidence, reason, model, mapped_at)
+		VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`)
+	if err != nil {
+		return fmt.Errorf("preparing spot_category_mappings insert: %w", err)
+	}
+	defer stmt.Close()
+	for _, mapping := range mappings {
+		primary := strings.TrimSpace(mapping.PrimaryTypeDisplayName)
+		category := strings.TrimSpace(mapping.CategoryName)
+		if primary == "" {
+			return fmt.Errorf("spot category mapping primary type display name is required")
+		}
+		if category == "" {
+			return fmt.Errorf("spot category mapping category name is required for %q", primary)
+		}
+		if _, err := stmt.Exec(primary, category, mapping.Confidence, mapping.Reason, strings.TrimSpace(mapping.Model)); err != nil {
+			return fmt.Errorf("inserting spot category mapping %q: %w", primary, err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit category mapping replacement: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) ExportDataForSource(source models.SpotSource) (*models.ExportData, error) {
+	normalized, err := models.NormalizeSpotSource(string(source))
+	if err != nil {
+		return nil, err
+	}
+	_ = normalized
+	return r.exportGeminiDirectData()
+}
+
+func (r *Repository) exportGeminiDirectData() (*models.ExportData, error) {
+	rows, err := r.db.Query(`
+		SELECT
+			CAST(gasp.article_source_id AS TEXT) || ':' || CAST(gsm.gemini_direct_spot_mention_id AS TEXT),
+			COALESCE(gsg.google_place_id, ''),
+			COALESCE(gsm.place, ''),
+			NULLIF(p.presenter_name, ''),
+			gsg.latitude,
+			gsg.longitude,
+			COALESCE(scm.category_name, 'Overig'),
+			COALESCE(gsm.youtube_url, ''),
+			COALESCE(s.url, ''),
+			s.published_at,
+			gsm.youtube_timestamp_seconds,
+			gc.spot_name,
+			gc.place_id,
+			gc.latitude,
+			gc.longitude,
+			gc.youtube_timestamp_seconds
+		FROM gemini_direct_article_spots gasp
+		JOIN gemini_direct_spot_google_geocodes gsg ON gsg.gemini_direct_spot_google_geocode_id = gasp.gemini_direct_spot_google_geocode_id
+		JOIN gemini_direct_spot_mentions gsm ON gsm.gemini_direct_spot_mention_id = gsg.gemini_direct_spot_mention_id
+		JOIN article_sources s ON s.article_source_id = gasp.article_source_id
+		LEFT JOIN (
+			SELECT article_source_id, MAX(presenter_id) AS presenter_id
+			FROM article_presenters
+			GROUP BY article_source_id
+		) ap ON ap.article_source_id = gasp.article_source_id
+		LEFT JOIN presenters p ON p.presenter_id = ap.presenter_id
+		LEFT JOIN gemini_direct_spot_corrections gc ON gc.spot_id = CAST(gasp.article_source_id AS TEXT) || ':' || CAST(gsm.gemini_direct_spot_mention_id AS TEXT)
+		LEFT JOIN spot_category_mappings scm ON scm.primary_type_display_name = trim(gsg.primary_type_display_name)
+		WHERE COALESCE(gc.hidden, 0) = 0
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("querying Gemini-direct export data: %w", err)
+	}
+	defer rows.Close()
+
+	data := &models.ExportData{Spots: []models.ExportSpot{}}
+	spotPublishedAt := make(map[string]time.Time)
 	presenterLatestPublishedAt := make(map[string]time.Time)
+	categoryCounts := make(map[string]int)
 
 	for rows.Next() {
 		var (
 			spot             models.ExportSpot
 			rawYouTubeLink   string
+			categoryName     string
 			publishedAtValue sql.NullString
-			refinedTS        sql.NullFloat64
-			originalTS       sql.NullFloat64
-			sentenceStartTS  sql.NullFloat64
+			sourceTS         sql.NullFloat64
 			cSpotName        sql.NullString
 			cPlaceID         sql.NullString
 			cLat             sql.NullFloat64
@@ -1191,8 +1185,8 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 			cTimestamp       sql.NullInt64
 		)
 		var presenterName sql.NullString
-		if err := rows.Scan(&spot.SpotID, &spot.PlaceID, &spot.SpotName, &presenterName, &spot.Latitude, &spot.Longitude, &rawYouTubeLink, &spot.ArticleURL, &publishedAtValue, &refinedTS, &originalTS, &sentenceStartTS, &cSpotName, &cPlaceID, &cLat, &cLng, &cTimestamp); err != nil {
-			return nil, fmt.Errorf("scanning export row: %w", err)
+		if err := rows.Scan(&spot.SpotID, &spot.PlaceID, &spot.SpotName, &presenterName, &spot.Latitude, &spot.Longitude, &categoryName, &rawYouTubeLink, &spot.ArticleURL, &publishedAtValue, &sourceTS, &cSpotName, &cPlaceID, &cLat, &cLng, &cTimestamp); err != nil {
+			return nil, fmt.Errorf("scanning Gemini-direct export row: %w", err)
 		}
 		if !publishedAtValue.Valid || strings.TrimSpace(publishedAtValue.String) == "" {
 			return nil, fmt.Errorf("exportable article url=%s has no stored publication time", spot.ArticleURL)
@@ -1203,6 +1197,10 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 		}
 		if presenterName.Valid {
 			spot.PresenterName = presenterName.String
+		}
+		spot.CategoryName = strings.TrimSpace(categoryName)
+		if spot.CategoryName == "" {
+			spot.CategoryName = "Overig"
 		}
 		if cSpotName.Valid {
 			spot.SpotName = cSpotName.String
@@ -1221,45 +1219,30 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 			}
 			spot.YouTubeLink = withYouTubeTimestampSeconds(rawYouTubeLink, cTimestamp.Int64)
 		} else {
-			spot.YouTubeLink = withYouTubeTimestamp(rawYouTubeLink, refinedTS, originalTS, sentenceStartTS)
+			spot.YouTubeLink = withYouTubeTimestamp(rawYouTubeLink, sourceTS, sql.NullFloat64{}, sql.NullFloat64{})
 		}
 		data.Spots = append(data.Spots, spot)
-
+		spotPublishedAt[spot.SpotID] = publishedAt
 		if presenterName.Valid {
-			current, ok := presenterLatestPublishedAt[presenterName.String]
-			if !ok || publishedAt.After(current) {
-				presenterLatestPublishedAt[presenterName.String] = publishedAt
+			name := strings.TrimSpace(presenterName.String)
+			if name != "" {
+				current, ok := presenterLatestPublishedAt[name]
+				if !ok || publishedAt.After(current) {
+					presenterLatestPublishedAt[name] = publishedAt
+				}
 			}
 		}
+		categoryCounts[spot.CategoryName]++
 	}
-
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating export rows: %w", err)
+		return nil, fmt.Errorf("iterating Gemini-direct export rows: %w", err)
 	}
-
 	slices.SortFunc(data.Spots, func(a, b models.ExportSpot) int {
-		if a.PlaceID < b.PlaceID {
+		at, bt := spotPublishedAt[a.SpotID], spotPublishedAt[b.SpotID]
+		if at.Before(bt) {
 			return -1
 		}
-		if a.PlaceID > b.PlaceID {
-			return 1
-		}
-		if a.PresenterName < b.PresenterName {
-			return -1
-		}
-		if a.PresenterName > b.PresenterName {
-			return 1
-		}
-		if a.SpotName < b.SpotName {
-			return -1
-		}
-		if a.SpotName > b.SpotName {
-			return 1
-		}
-		if a.YouTubeLink < b.YouTubeLink {
-			return -1
-		}
-		if a.YouTubeLink > b.YouTubeLink {
+		if bt.Before(at) {
 			return 1
 		}
 		if a.SpotID < b.SpotID {
@@ -1270,28 +1253,73 @@ func (r *Repository) ExportData() (*models.ExportData, error) {
 		}
 		return 0
 	})
-	for presenterName := range presenterLatestPublishedAt {
-		data.Presenters = append(data.Presenters, models.ExportPresenter{PresenterName: presenterName})
+
+	presenterNames := make([]string, 0, len(presenterLatestPublishedAt))
+	for name := range presenterLatestPublishedAt {
+		presenterNames = append(presenterNames, name)
 	}
-	slices.SortFunc(data.Presenters, func(a, b models.ExportPresenter) int {
-		aPublished := presenterLatestPublishedAt[a.PresenterName]
-		bPublished := presenterLatestPublishedAt[b.PresenterName]
-		if aPublished.After(bPublished) {
+	slices.SortFunc(presenterNames, func(a, b string) int {
+		at, bt := presenterLatestPublishedAt[a], presenterLatestPublishedAt[b]
+		if at.After(bt) {
 			return -1
 		}
-		if aPublished.Before(bPublished) {
+		if bt.After(at) {
 			return 1
 		}
-		if a.PresenterName < b.PresenterName {
+		if a < b {
 			return -1
 		}
-		if a.PresenterName > b.PresenterName {
+		if a > b {
 			return 1
 		}
 		return 0
 	})
+	for _, name := range presenterNames {
+		data.Presenters = append(data.Presenters, models.ExportPresenter{PresenterName: name})
+	}
 
+	categoryNames := make([]string, 0, len(categoryCounts))
+	for name := range categoryCounts {
+		categoryNames = append(categoryNames, name)
+	}
+	slices.SortFunc(categoryNames, func(a, b string) int {
+		if a == "Overig" && b != "Overig" {
+			return 1
+		}
+		if b == "Overig" && a != "Overig" {
+			return -1
+		}
+		if categoryCounts[a] > categoryCounts[b] {
+			return -1
+		}
+		if categoryCounts[a] < categoryCounts[b] {
+			return 1
+		}
+		if a < b {
+			return -1
+		}
+		if a > b {
+			return 1
+		}
+		return 0
+	})
+	for _, name := range categoryNames {
+		data.Categories = append(data.Categories, models.ExportCategory{CategoryName: name})
+	}
 	return data, nil
+}
+
+func (r *Repository) ResetGeminiDerivedData() error {
+	_, err := r.db.Exec(`
+		DELETE FROM gemini_direct_spot_corrections;
+		DELETE FROM gemini_direct_article_spots;
+		DELETE FROM gemini_direct_spot_google_geocodes;
+		DELETE FROM gemini_direct_spot_mentions;
+	`)
+	if err != nil {
+		return fmt.Errorf("resetting Gemini-derived data: %w", err)
+	}
+	return nil
 }
 
 func withYouTubeTimestamp(raw string, refinedTS, originalTS, sentenceStartTS sql.NullFloat64) string {

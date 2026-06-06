@@ -1,9 +1,12 @@
 package exportdata
 
+import "github.com/hkstm/fccentrummap/internal/models"
+
 type Request struct {
 	DBPath     string
 	OutputPath string
 	InputPath  string
+	SpotSource models.SpotSource
 }
 
 type Response struct {

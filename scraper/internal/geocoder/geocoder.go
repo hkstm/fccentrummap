@@ -18,6 +18,7 @@ const (
 	defaultEndpoint             = "https://places.googleapis.com/v1/places:searchText"
 	defaultPlaceDetailsEndpoint = "https://places.googleapis.com/v1/places"
 	defaultHTTPReferer          = "https://fccentrummap.hkstm.dev/"
+	defaultLanguageCode         = "nl"
 
 	rectLowLat  = 52.274525
 	rectLowLng  = 4.711585
@@ -32,10 +33,12 @@ var (
 )
 
 type Coordinates struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	PlaceID   string  `json:"placeId,omitempty"`
-	Name      string  `json:"name,omitempty"`
+	Latitude               float64 `json:"latitude"`
+	Longitude              float64 `json:"longitude"`
+	PlaceID                string  `json:"placeId,omitempty"`
+	Name                   string  `json:"name,omitempty"`
+	PrimaryType            string  `json:"primaryType,omitempty"`
+	PrimaryTypeDisplayName string  `json:"primaryTypeDisplayName,omitempty"`
 }
 
 type Geocoder struct {
@@ -111,7 +114,7 @@ func (g *Geocoder) GeocodePlace(ctx context.Context, placeName string) (*Coordin
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	g.setGoogleAPIHeaders(req, "places.location,places.id,places.displayName.text")
+	g.setGoogleAPIHeaders(req, "places.location,places.id,places.displayName.text,places.primaryType,places.primaryTypeDisplayName")
 
 	resp, err := g.httpClient.Do(req)
 	if err != nil {
@@ -250,7 +253,10 @@ func (g *Geocoder) LookupPlaceIDCoordinates(ctx context.Context, placeID string)
 	if err != nil {
 		return nil, fmt.Errorf("create place details request: %w", err)
 	}
-	g.setGoogleAPIHeaders(req, "id,location,displayName.text")
+	q := req.URL.Query()
+	q.Set("languageCode", defaultLanguageCode)
+	req.URL.RawQuery = q.Encode()
+	g.setGoogleAPIHeaders(req, "id,location,displayName.text,primaryType,primaryTypeDisplayName")
 
 	resp, err := g.httpClient.Do(req)
 	if err != nil {
@@ -277,7 +283,8 @@ func (g *Geocoder) LookupPlaceIDCoordinates(ctx context.Context, placeID string)
 
 func buildTextSearchRequestBody(query string) ([]byte, error) {
 	payload := map[string]any{
-		"textQuery": query,
+		"textQuery":    query,
+		"languageCode": defaultLanguageCode,
 		"locationRestriction": map[string]any{
 			"rectangle": map[string]any{
 				"low": map[string]float64{
@@ -294,13 +301,18 @@ func buildTextSearchRequestBody(query string) ([]byte, error) {
 	return json.Marshal(payload)
 }
 
+type localizedText struct {
+	Text         string `json:"text"`
+	LanguageCode string `json:"languageCode"`
+}
+
 type textSearchResponse struct {
 	Places []struct {
-		ID          string `json:"id"`
-		DisplayName struct {
-			Text string `json:"text"`
-		} `json:"displayName"`
-		Location struct {
+		ID                     string        `json:"id"`
+		DisplayName            localizedText `json:"displayName"`
+		PrimaryType            string        `json:"primaryType"`
+		PrimaryTypeDisplayName localizedText `json:"primaryTypeDisplayName"`
+		Location               struct {
 			Latitude  *float64 `json:"latitude"`
 			Longitude *float64 `json:"longitude"`
 		} `json:"location"`
@@ -309,11 +321,11 @@ type textSearchResponse struct {
 }
 
 type placeDetailsResponse struct {
-	ID          string `json:"id"`
-	DisplayName struct {
-		Text string `json:"text"`
-	} `json:"displayName"`
-	Location struct {
+	ID                     string        `json:"id"`
+	DisplayName            localizedText `json:"displayName"`
+	PrimaryType            string        `json:"primaryType"`
+	PrimaryTypeDisplayName localizedText `json:"primaryTypeDisplayName"`
+	Location               struct {
 		Latitude  *float64 `json:"latitude"`
 		Longitude *float64 `json:"longitude"`
 	} `json:"location"`
@@ -337,10 +349,12 @@ func parseCoordinatesFromPlaceDetailsResponse(body []byte) (*Coordinates, error)
 		return nil, ErrNoResults
 	}
 	return &Coordinates{
-		Latitude:  lat,
-		Longitude: lng,
-		PlaceID:   strings.TrimSpace(payload.ID),
-		Name:      strings.TrimSpace(payload.DisplayName.Text),
+		Latitude:               lat,
+		Longitude:              lng,
+		PlaceID:                strings.TrimSpace(payload.ID),
+		Name:                   strings.TrimSpace(payload.DisplayName.Text),
+		PrimaryType:            strings.TrimSpace(payload.PrimaryType),
+		PrimaryTypeDisplayName: strings.TrimSpace(payload.PrimaryTypeDisplayName.Text),
 	}, nil
 }
 
@@ -362,10 +376,12 @@ func parseCoordinatesFromTextSearchResponse(body []byte) (*Coordinates, error) {
 			continue
 		}
 		return &Coordinates{
-			Latitude:  lat,
-			Longitude: lng,
-			PlaceID:   strings.TrimSpace(p.ID),
-			Name:      strings.TrimSpace(p.DisplayName.Text),
+			Latitude:               lat,
+			Longitude:              lng,
+			PlaceID:                strings.TrimSpace(p.ID),
+			Name:                   strings.TrimSpace(p.DisplayName.Text),
+			PrimaryType:            strings.TrimSpace(p.PrimaryType),
+			PrimaryTypeDisplayName: strings.TrimSpace(p.PrimaryTypeDisplayName.Text),
 		}, nil
 	}
 	return nil, ErrNoResults

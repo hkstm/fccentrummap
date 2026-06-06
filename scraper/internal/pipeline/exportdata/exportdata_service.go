@@ -3,6 +3,8 @@ package exportdata
 import (
 	"context"
 	"fmt"
+
+	"github.com/hkstm/fccentrummap/internal/models"
 )
 
 type Service struct {
@@ -15,6 +17,13 @@ func NewService(sqlite SQLitePort, file FilePort) *Service {
 }
 
 func (s *Service) Run(ctx context.Context, mode string, req Request) (Response, error) {
+	if mode == "sqlite" {
+		source, err := models.NormalizeSpotSource(string(req.SpotSource))
+		if err != nil {
+			return Response{}, err
+		}
+		req.SpotSource = source
+	}
 	switch mode {
 	case "sqlite":
 		if s.sqlite == nil {

@@ -21,8 +21,8 @@ var (
 )
 
 type Repository interface {
-	GetSpotCorrectionTarget(spotID string) (*models.SpotCorrectionTarget, error)
-	UpsertSpotCorrection(c models.SpotCorrection) error
+	GetSpotCorrectionTargetForSource(source models.SpotSource, spotID string) (*models.SpotCorrectionTarget, error)
+	UpsertSpotCorrectionForSource(source models.SpotSource, c models.SpotCorrection) error
 }
 
 type PlaceIDLookup interface {
@@ -35,6 +35,7 @@ type PlaceInputResolver interface {
 
 type CorrectionInput struct {
 	SpotID                string
+	SpotSource            models.SpotSource
 	SpotName              *string
 	PlaceID               *string
 	TimestampedYouTubeURL *string
@@ -55,7 +56,11 @@ func (s *Service) SaveCorrection(ctx context.Context, input CorrectionInput) (*m
 	if spotID == "" {
 		return nil, fmt.Errorf("spot id is required")
 	}
-	target, err := s.repo.GetSpotCorrectionTarget(spotID)
+	source, err := models.NormalizeSpotSource(string(input.SpotSource))
+	if err != nil {
+		return nil, err
+	}
+	target, err := s.repo.GetSpotCorrectionTargetForSource(source, spotID)
 	if err != nil {
 		return nil, err
 	}
@@ -108,27 +113,28 @@ func (s *Service) SaveCorrection(ctx context.Context, input CorrectionInput) (*m
 		}
 	}
 
-	if err := s.repo.UpsertSpotCorrection(correction); err != nil {
+	if err := s.repo.UpsertSpotCorrectionForSource(source, correction); err != nil {
 		return nil, err
 	}
-	return s.repo.GetSpotCorrectionTarget(spotID)
+	return s.repo.GetSpotCorrectionTargetForSource(source, spotID)
 }
 
-func resolvePlaceCorrectionInput(ctx context.Context, lookup PlaceIDLookup, url string) (*geocoder.Coordinates, error) {
-	// 1. Automatically parse and trim the token out of the URL
-	token := ExtractTokenFromURL(url)
-	if token == "" {
-		return nil, fmt.Errorf("error: Could not find a valid location token" +
-			" inside the provided URL")
+func resolvePlaceCorrectionInput(ctx context.Context, lookup PlaceIDLookup, input string) (*geocoder.Coordinates, error) {
+	if resolver, ok := lookup.(PlaceInputResolver); ok {
+		return resolver.ResolvePlaceInput(ctx, input)
 	}
 
-	// 2. Decode the token purely offline
-	placeID, err := DecodeUrlTokenToPlaceID(token)
-	if err != nil {
-		return nil, fmt.Errorf("Decoding error: %v\n", err)
+	// Automatically parse and trim a Google Maps feature token when present.
+	if token := ExtractTokenFromURL(input); token != "" {
+		placeID, err := DecodeUrlTokenToPlaceID(token)
+		if err != nil {
+			return nil, fmt.Errorf("Decoding error: %v\n", err)
+		}
+		return lookup.LookupPlaceIDCoordinates(ctx, placeID)
 	}
 
-	return lookup.LookupPlaceIDCoordinates(ctx, placeID)
+	// Preserve the historical path for callers that already provide a raw Place ID.
+	return lookup.LookupPlaceIDCoordinates(ctx, input)
 }
 
 // DecodeUrlTokenToPlaceID takes the hex token from the URL and converts it to a Place ID offline.

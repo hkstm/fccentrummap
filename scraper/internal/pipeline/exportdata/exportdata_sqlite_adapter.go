@@ -23,7 +23,7 @@ func (a *SQLiteAdapter) Run(_ context.Context, req Request) (Response, error) {
 		return Response{}, err
 	}
 
-	data, err := repo.ExportData()
+	data, err := repo.ExportDataForSource(req.SpotSource)
 	if err != nil {
 		return Response{}, err
 	}

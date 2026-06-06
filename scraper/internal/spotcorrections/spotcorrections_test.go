@@ -10,8 +10,9 @@ import (
 )
 
 type fakeRepo struct {
-	target *models.SpotCorrectionTarget
-	saved  *models.SpotCorrection
+	target     *models.SpotCorrectionTarget
+	saved      *models.SpotCorrection
+	lastSource models.SpotSource
 }
 
 func (f *fakeRepo) GetSpotCorrectionTarget(spotID string) (*models.SpotCorrectionTarget, error) {
@@ -44,6 +45,16 @@ func (f *fakeRepo) GetSpotCorrectionTarget(spotID string) (*models.SpotCorrectio
 func (f *fakeRepo) UpsertSpotCorrection(c models.SpotCorrection) error {
 	f.saved = &c
 	return nil
+}
+
+func (f *fakeRepo) GetSpotCorrectionTargetForSource(source models.SpotSource, spotID string) (*models.SpotCorrectionTarget, error) {
+	f.lastSource = source
+	return f.GetSpotCorrectionTarget(spotID)
+}
+
+func (f *fakeRepo) UpsertSpotCorrectionForSource(source models.SpotSource, c models.SpotCorrection) error {
+	f.lastSource = source
+	return f.UpsertSpotCorrection(c)
 }
 
 type fakeLookup struct {
@@ -90,6 +101,17 @@ func TestSaveCorrectionResolvesPlaceAndPreservesPreviousOnFailure(t *testing.T) 
 	}
 	if repo.saved != previous {
 		t.Fatalf("previous correction should remain unchanged on lookup failure")
+	}
+}
+
+func TestSaveCorrectionUsesSelectedSpotSourceAndRejectsUnsupportedSource(t *testing.T) {
+	repo := &fakeRepo{target: &models.SpotCorrectionTarget{SpotID: "1:1", EffectiveSpotName: "Old", EffectivePlaceID: "old"}}
+	_, err := NewService(repo, fakeLookup{}).SaveCorrection(context.Background(), CorrectionInput{SpotID: "1:1", SpotSource: models.SpotSource("bad-source"), Hide: true})
+	if err == nil {
+		t.Fatalf("expected unsupported source error")
+	}
+	if _, err := NewService(repo, fakeLookup{}).SaveCorrection(context.Background(), CorrectionInput{SpotID: "1:1", SpotSource: "bad"}); err == nil {
+		t.Fatalf("expected unsupported source error")
 	}
 }
 

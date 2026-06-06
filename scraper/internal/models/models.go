@@ -1,6 +1,30 @@
 package models
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
+
+// SpotSource selects which extracted spot table set downstream stages consume.
+type SpotSource string
+
+const (
+	SpotSourceGeminiDirect SpotSource = "gemini-direct"
+)
+
+func NormalizeSpotSource(raw string) (SpotSource, error) {
+	source := SpotSource(strings.TrimSpace(strings.ToLower(raw)))
+	if source == "" {
+		return SpotSourceGeminiDirect, nil
+	}
+	switch source {
+	case SpotSourceGeminiDirect:
+		return source, nil
+	default:
+		return "", fmt.Errorf("unsupported spot source %q (supported: %s)", raw, SpotSourceGeminiDirect)
+	}
+}
 
 type ArticleSource struct {
 	ArticleSourceID int64
@@ -15,13 +39,6 @@ type ArticleFetch struct {
 	FetchedAt       time.Time
 }
 
-type ArticleText struct {
-	ArticleTextID  int64
-	ArticleFetchID int64
-	CleanedText    string
-	ExtractedAt    time.Time
-}
-
 type ArticleRaw struct {
 	ArticleRawID int64
 	URL          string
@@ -30,77 +47,6 @@ type ArticleRaw struct {
 	Status       string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
-}
-
-type ArticleAudioSource struct {
-	AudioSourceID int64
-	ArticleRawID  int64
-	VideoID       string
-	YouTubeURL    string
-	AudioFormat   string
-	MIMEType      string
-	AudioBlob     []byte
-	ByteSize      int64
-	CreatedAt     time.Time
-}
-
-type ArticleAudioTranscription struct {
-	TranscriptionID  int64
-	AudioSourceID    int64
-	Provider         string
-	Language         string
-	HTTPStatus       int
-	ResponseJSON     string
-	ResponseByteSize int64
-	ErrorMessage     *string
-	CreatedAt        time.Time
-}
-
-const (
-	ArticleTextExtractionStatusMatched = "matched"
-	ArticleTextExtractionStatusNoMatch = "no_match"
-	ArticleTextExtractionStatusError   = "error"
-
-	ArticleTextExtractionModeTrafilatura = "trafilatura"
-	ArticleTextExtractionModeNoMatch     = "no_match"
-	ArticleTextExtractionModeError       = "error"
-
-	ArticleTextSourceTypeTrafilaturaText = "trafilatura-text"
-)
-
-type ArticleTextContentInput struct {
-	SourceType string
-	Content    string
-}
-
-type ArticleTextExtractionResult struct {
-	ArticleRawID   int64
-	ExtractionMode string
-	Status         string
-	MatchedCount   int
-	ErrorMessage   *string
-	Contents       []ArticleTextContentInput
-}
-
-type ArticleTextExtraction struct {
-	ExtractionID   int64
-	ArticleRawID   int64
-	ExtractionMode string
-	Status         string
-	MatchedCount   int
-	ErrorMessage   *string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-}
-
-type ArticleTextContent struct {
-	TextContentID int64
-	ExtractionID  int64
-	ArticleRawID  int64
-	SourceType    string
-	Content       string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
 }
 
 type Author struct {
@@ -133,10 +79,19 @@ type ExportSpot struct {
 	PlaceID       string  `json:"placeId"`
 	SpotName      string  `json:"spotName"`
 	PresenterName string  `json:"presenterName"`
+	CategoryName  string  `json:"categoryName"`
 	Latitude      float64 `json:"latitude"`
 	Longitude     float64 `json:"longitude"`
 	YouTubeLink   string  `json:"youtubeLink"`
 	ArticleURL    string  `json:"articleUrl"`
+}
+
+type ExportPresenter struct {
+	PresenterName string `json:"presenterName"`
+}
+
+type ExportCategory struct {
+	CategoryName string `json:"categoryName"`
 }
 
 // SpotCorrection stores optional maintainer overrides keyed by stable ExportSpot.SpotID.
@@ -172,31 +127,8 @@ type SpotCorrectionTarget struct {
 	Correction                    *SpotCorrection
 }
 
-type ExportPresenter struct {
-	PresenterName string `json:"presenterName"`
-}
-
-type SpotExtractionRecordInput struct {
-	ArticleRawID       int64
-	TranscriptionID    int64
-	PresenterName      *string
-	PromptText         string
-	RawResponseJSON    string
-	ParsedResponseJSON string
-}
-
-type SpotExtractionRecord struct {
-	SpotExtractionID   int64
-	ArticleRawID       int64
-	TranscriptionID    int64
-	PresenterName      *string
-	PromptText         string
-	RawResponseJSON    string
-	ParsedResponseJSON string
-	CreatedAt          time.Time
-}
-
 type ExportData struct {
+	Presenters []ExportPresenter `json:"presenters,omitempty"`
+	Categories []ExportCategory  `json:"categories,omitempty"`
 	Spots      []ExportSpot      `json:"spots"`
-	Presenters []ExportPresenter `json:"presenters"`
 }

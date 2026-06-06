@@ -25,6 +25,9 @@ func TestBuildTextSearchRequestBody_UsesRequiredRectangleWithoutLocationBias(t *
 	if _, ok := payload["locationBias"]; ok {
 		t.Fatalf("locationBias must be absent")
 	}
+	if got := payload["languageCode"]; got != defaultLanguageCode {
+		t.Fatalf("languageCode = %v, want %s", got, defaultLanguageCode)
+	}
 
 	rawRestriction, ok := payload["locationRestriction"].(map[string]any)
 	if !ok {
@@ -56,7 +59,7 @@ func TestGoogleMapsHTTPRefererDefaultsToProductionSite(t *testing.T) {
 }
 
 func TestParseCoordinatesFromTextSearchResponse_SelectsFirstValidResult(t *testing.T) {
-	payload := []byte(`{"places":[{"location":{"latitude":0,"longitude":0}},{"id":"places/abc123","displayName":{"text":"Dream Unit"},"location":{"latitude":52.3,"longitude":4.9}},{"location":{"latitude":52.4,"longitude":4.8}}]}`)
+	payload := []byte(`{"places":[{"location":{"latitude":0,"longitude":0}},{"id":"places/abc123","displayName":{"text":"Dream Unit"},"primaryType":"restaurant","primaryTypeDisplayName":{"text":"Restaurant"},"location":{"latitude":52.3,"longitude":4.9}},{"location":{"latitude":52.4,"longitude":4.8}}]}`)
 	coords, err := parseCoordinatesFromTextSearchResponse(payload)
 	if err != nil {
 		t.Fatalf("parseCoordinatesFromTextSearchResponse error = %v", err)
@@ -70,6 +73,9 @@ func TestParseCoordinatesFromTextSearchResponse_SelectsFirstValidResult(t *testi
 	if coords.Name != "Dream Unit" {
 		t.Fatalf("unexpected name: %q", coords.Name)
 	}
+	if coords.PrimaryType != "restaurant" || coords.PrimaryTypeDisplayName != "Restaurant" {
+		t.Fatalf("unexpected primary type fields: %+v", coords)
+	}
 }
 
 func TestResolvePlaceInput(t *testing.T) {
@@ -81,6 +87,9 @@ func TestResolvePlaceInput(t *testing.T) {
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/maps/place/"):
 			w.WriteHeader(http.StatusOK)
 		case r.Method == http.MethodPost && r.URL.Path == "/text":
+			if got := r.Header.Get("X-Goog-FieldMask"); !strings.Contains(got, "places.primaryType") || !strings.Contains(got, "places.primaryTypeDisplayName") {
+				t.Fatalf("missing primary type field mask: %q", got)
+			}
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				t.Fatalf("read body: %v", err)
@@ -88,11 +97,17 @@ func TestResolvePlaceInput(t *testing.T) {
 			if !strings.Contains(string(body), "Van Eeghenlaan") {
 				t.Fatalf("expected address text search body, got %s", string(body))
 			}
+			if !strings.Contains(string(body), `"languageCode":"nl"`) {
+				t.Fatalf("expected Dutch languageCode, got %s", string(body))
+			}
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"places":[{"id":"ChIJaddress","displayName":{"text":"Van Eeghenlaan 33"},"location":{"latitude":52.3580636,"longitude":4.8742068}}]}`))
 		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "ChIJabc"):
+			if got := r.URL.Query().Get("languageCode"); got != defaultLanguageCode {
+				t.Fatalf("languageCode = %q, want %q", got, defaultLanguageCode)
+			}
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"id":"ChIJabc","displayName":{"text":"Place"},"location":{"latitude":52.3,"longitude":4.9}}`))
+			_, _ = w.Write([]byte(`{"id":"ChIJabc","displayName":{"text":"Place"},"primaryType":"cafe","primaryTypeDisplayName":{"text":"Café"},"location":{"latitude":52.3,"longitude":4.9}}`))
 		default:
 			t.Fatalf("unexpected request %s %s", r.Method, r.URL.String())
 		}
@@ -116,6 +131,9 @@ func TestResolvePlaceInput(t *testing.T) {
 	if fromID.PlaceID != "ChIJabc" || fromID.Latitude != 52.3 || fromID.Longitude != 4.9 {
 		t.Fatalf("unexpected place ID coords %+v", fromID)
 	}
+	if fromID.PrimaryType != "cafe" || fromID.PrimaryTypeDisplayName != "Café" {
+		t.Fatalf("unexpected place ID primary type fields %+v", fromID)
+	}
 }
 
 func TestExtractPlaceInputFromMapsURL(t *testing.T) {
@@ -136,14 +154,17 @@ func TestLookupPlaceIDCoordinates(t *testing.T) {
 			if r.Method != http.MethodGet || !strings.Contains(r.URL.Path, "ChIJabc") {
 				t.Fatalf("unexpected request %s %s", r.Method, r.URL.String())
 			}
-			if r.Header.Get("X-Goog-FieldMask") == "" {
-				t.Fatalf("expected field mask header")
+			if got := r.Header.Get("X-Goog-FieldMask"); !strings.Contains(got, "primaryType") || !strings.Contains(got, "primaryTypeDisplayName") {
+				t.Fatalf("expected primary type field mask header, got %q", got)
+			}
+			if got := r.URL.Query().Get("languageCode"); got != defaultLanguageCode {
+				t.Fatalf("languageCode = %q, want %q", got, defaultLanguageCode)
 			}
 			if r.Header.Get("Referer") != defaultHTTPReferer {
 				t.Fatalf("expected default referer header, got %q", r.Header.Get("Referer"))
 			}
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"id":"ChIJabc","displayName":{"text":"Place"},"location":{"latitude":52.3,"longitude":4.9}}`))
+			_, _ = w.Write([]byte(`{"id":"ChIJabc","displayName":{"text":"Place"},"primaryType":"cafe","primaryTypeDisplayName":{"text":"Café"},"location":{"latitude":52.3,"longitude":4.9}}`))
 		}))
 		defer srv.Close()
 
@@ -154,6 +175,9 @@ func TestLookupPlaceIDCoordinates(t *testing.T) {
 		}
 		if coords.PlaceID != "ChIJabc" || coords.Latitude != 52.3 || coords.Longitude != 4.9 {
 			t.Fatalf("unexpected coords %+v", coords)
+		}
+		if coords.PrimaryType != "cafe" || coords.PrimaryTypeDisplayName != "Café" {
+			t.Fatalf("unexpected primary type fields %+v", coords)
 		}
 	})
 
