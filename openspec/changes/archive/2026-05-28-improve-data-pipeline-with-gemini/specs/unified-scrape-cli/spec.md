@@ -1,7 +1,4 @@
-## Purpose
-Define a single stage-based CLI entrypoint for current Gemini-first scraper pipeline execution with explicit I/O mode behavior and preflight validation.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Unified scrape CLI provides Gemini-first stage subcommands
 The system SHALL provide a single urfave/cli v3 entrypoint for pipeline execution with subcommands for the current Gemini-first pipeline: `init`, `collect-article-urls`, `fetch-articles`, `extract-spots-gemini-direct`, `geocode-spots`, and `export-data`.
@@ -17,30 +14,6 @@ The system SHALL provide a single urfave/cli v3 entrypoint for pipeline executio
 - **THEN** the Gemini-direct extraction command SHALL be exposed as the extraction command for the current data pipeline
 - **AND** downstream `geocode-spots` and `export-data` commands SHALL consume Gemini-direct data by default
 
-### Requirement: Unsupported stage/mode combinations fail explicitly
-The unified CLI SHALL return a non-zero error with actionable guidance when a stage is invoked in an unsupported I/O mode.
-
-#### Scenario: Unsupported stage/mode requested
-- **WHEN** a user runs any stage with an unsupported `--io` mode
-- **THEN** the CLI SHALL fail explicitly before stage mutations begin
-- **AND** it SHALL instruct the user on the supported mode and required inputs for that stage
-
-### Requirement: Init performs API preflight validation
-The `init` stage SHALL validate required API credentials before starting pipeline setup.
-
-#### Scenario: Missing required API credentials
-- **WHEN** one or more required API credentials are missing
-- **THEN** `init` SHALL fail with non-zero status
-- **AND** it SHALL report which required environment variables are missing
-
-### Requirement: Unified scrape CLI MAY adopt idiomatic urfave/cli v3 flag conventions
-The unified scrape CLI SHALL allow urfave/cli v3-native flag handling and command ergonomics, and it SHALL NOT be required to preserve exact legacy stdlib-flag invocation edge cases.
-
-#### Scenario: Invocation differs from legacy parsing but remains documented
-- **WHEN** a previously accepted edge-case invocation is incompatible with urfave/cli v3 conventions
-- **THEN** the CLI MAY reject that invocation
-- **AND** the repository documentation SHALL reflect the supported invocation form
-
 ### Requirement: Geocode stage SHALL materialize Gemini spot links in the same command
 The `geocode-spots` command SHALL persist Gemini geocode results and article-to-spot link rows in one stage execution.
 
@@ -48,3 +21,9 @@ The `geocode-spots` command SHALL persist Gemini geocode results and article-to-
 - **WHEN** `geocode-spots` resolves coordinates for extracted Gemini mentions
 - **THEN** it SHALL write `gemini_direct_spot_google_geocodes` rows for mentions
 - **AND** it SHALL write corresponding `gemini_direct_article_spots` rows in the same run
+
+## REMOVED Requirements
+
+### Requirement: Legacy transcription stage commands remain part of the current pipeline
+**Reason**: The Gemini-direct flow is now the source of truth and the old transcription-based extraction flow is being removed.
+**Migration**: Use `extract-spots-gemini-direct` followed by `geocode-spots` and `export-data` for the current pipeline. Historical command behavior remains available only from version-control history, not the active CLI contract.

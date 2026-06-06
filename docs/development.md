@@ -27,19 +27,18 @@ go run ./cmd/scrape <stage> --help
 # Architecture: CLI -> service -> adapter (stage-first packages)
 # see: internal/pipeline/* and docs/architecture.md
 
-# Required env for init preflight: MURMEL_API_KEY, PRODUCTION_GOOGLE_MAPS_API_KEY,
-# and one of GEMINI_API_KEY / GOOGLE_API_KEY / GOOGLE_GENERATIVE_LANGUAGE_API_KEY
+# Required env for init preflight: PRODUCTION_GOOGLE_MAPS_API_KEY and one of
+# GEMINI_API_KEY / GOOGLE_API_KEY / GOOGLE_GENERATIVE_LANGUAGE_API_KEY
 go run ./cmd/scrape init --db-path ../data/spots.db --reset
 go run ./cmd/scrape collect-article-urls --io sqlite --db-path ../data/spots.db --article-url "<FCCENTRUM_ARTICLE_URL>"
 go run ./cmd/scrape fetch-articles --io sqlite --db-path ../data/spots.db
-go run ./cmd/scrape extract-article-text --io sqlite --db-path ../data/spots.db
-go run ./cmd/scrape acquire-audio --io sqlite --db-path ../data/spots.db
-go run ./cmd/scrape transcribe-audio --io sqlite --db-path ../data/spots.db --language nl
-go run ./cmd/scrape extract-spots --io sqlite --db-path ../data/spots.db --out-dir ../data
+# Optional destructive reset of Gemini-derived generated data before a full rerun:
+go run ./cmd/scrape init --db-path ../data/spots.db --reset-gemini-derived
+go run ./cmd/scrape extract-spots-gemini-direct --io sqlite --db-path ../data/spots.db --out-dir ../data/gemini-direct
 go run ./cmd/scrape geocode-spots --io sqlite --db-path ../data/spots.db
 
 # Optional file-mode geocode input contract
-go run ./cmd/scrape geocode-spots --io file --in ../data/stages/extract-spots/<identity>__extract-spots__candidates.json
+go run ./cmd/scrape geocode-spots --io file --in ../data/stages/geocode-input/<identity>.json
 
 # File-mode contracts (typed, deterministic artifacts)
 # see: docs/stage-file-contracts.md
@@ -53,7 +52,6 @@ go build ./...
 
 ## Environment variables
 
-- `MURMEL_API_KEY` (required by `cmd/scrape init` preflight and transcription)
 - `PRODUCTION_GOOGLE_MAPS_API_KEY` (required by `cmd/scrape init` preflight and geocode)
 - one of `GEMINI_API_KEY` / `GOOGLE_API_KEY` / `GOOGLE_GENERATIVE_LANGUAGE_API_KEY` (required by `cmd/scrape init` preflight)
 - `GOOGLE_PLACES_TEXT_SEARCH_ENDPOINT` (optional override for geocoder endpoint; useful for local testing)

@@ -1,23 +1,4 @@
-# scraping-data-json-export Specification
-
-## Purpose
-Define the SQLite-to-JSON export contract used by the scraper pipeline and frontend visualization.
-
-## Requirements
-
-### Requirement: CLI-triggered JSON export
-The system SHALL provide a CLI option to generate scraping data JSON export as an optional operation.
-
-#### Scenario: User invokes export option
-- **WHEN** the user executes the scraping CLI with the export option enabled
-- **THEN** the system MUST run the JSON export process
-
-### Requirement: Configurable export output path
-The system SHALL allow users to specify the output path for the generated JSON export.
-
-#### Scenario: User provides output path
-- **WHEN** the user passes an explicit export output path
-- **THEN** the system MUST write the JSON export to that path
+## ADDED Requirements
 
 ### Requirement: Spot category mapping stage
 The system SHALL provide a category-mapping pipeline stage that regenerates a stored mapping from observed Google Places primary type display names to fixed frontend category names.
@@ -81,6 +62,8 @@ The JSON export process SHALL include top-level `presenters` and `categories` ar
 - **AND** the top-level `presenters` array SHALL be empty or omitted
 - **AND** the top-level `categories` array SHALL be empty or omitted
 
+## MODIFIED Requirements
+
 ### Requirement: Deterministic ordering in output
 The system SHALL produce deterministic ordering of exported arrays to make output stable across runs with unchanged source data. Exported spots SHALL retain stable ordering by their existing deterministic spot fields. Exported presenters SHALL be ordered by the most recent associated article publication timestamp descending, with deterministic name tie-breaking. Exported categories SHALL be ordered by descending exported spot count, with deterministic name tie-breaking, except `Overig` SHALL always appear last when present.
 
@@ -119,22 +102,7 @@ The JSON export process SHALL read exportable geocoded spots, article links, pre
 - **AND** each exported spot SHALL include `categoryName` derived from `spot_category_mappings` or `Overig` fallback behavior
 - **AND** the generated JSON SHALL NOT include the raw primary type display name field on exported spots
 
-### Requirement: JSON export applies source-specific spot corrections
-The JSON export process SHALL apply corrections from the Gemini-direct correction table.
-
-#### Scenario: Gemini correction overrides exported spot
-- **WHEN** a Gemini-derived exportable spot has a stored correction in `gemini_direct_spot_corrections`
-- **THEN** the exported spot record SHALL apply the corrected name, place, coordinates, timestamp, or hidden state according to existing correction rules
-
-### Requirement: JSON export keeps source-neutral public identifiers
-The JSON export process SHALL keep public spot identifiers source-neutral.
-
-#### Scenario: Gemini export builds spot identifier
-- **WHEN** a Gemini-derived spot is exported
-- **THEN** its public spot identifier SHALL use the existing `<article_source_id>:<mention_id>` format
-- **AND** the identifier SHALL NOT include a `gemini-direct` prefix or other source marker
-
-### Requirement: JSON export includes top-level presenters
+### Requirement: JSON export omits top-level presenters
 The JSON export process SHALL include a top-level `presenters` array because presenter filter ordering is part of the static JSON contract.
 
 #### Scenario: Export contains presenters metadata
@@ -142,3 +110,16 @@ The JSON export process SHALL include a top-level `presenters` array because pre
 - **THEN** the JSON SHALL contain a top-level `spots` array
 - **AND** the JSON SHALL contain a top-level `presenters` array of objects with `presenterName`
 - **AND** presenter names SHALL remain available on exported spot records for denormalized spot display and filtering
+
+### Requirement: Exported spots include primary type display name
+Each exported spot record SHALL include a mapped `categoryName` instead of the Google Places primary type display name.
+
+#### Scenario: Primary type display name is stored
+- **WHEN** an exportable Gemini geocode row has `primary_type_display_name`
+- **THEN** the exported spot SHALL include a mapped `categoryName` in the spot record
+- **AND** the exported spot SHALL NOT include the raw primary type display name field
+
+#### Scenario: Primary type display name is absent
+- **WHEN** an exportable Gemini geocode row has no `primary_type_display_name`
+- **THEN** the exported spot SHALL remain exportable with `categoryName` set to `Overig`
+- **AND** the exported spot SHALL NOT include the raw primary type display name field

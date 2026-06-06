@@ -20,10 +20,10 @@ scraper -> data/spots.db -> viz/public/data/spots.json -> viz frontend
 
 ## Current implementation shape
 
-- `scraper/cmd/scrape` provides unified stage subcommands (`init`, `collect-article-urls`, `fetch-articles`, `acquire-audio`, `transcribe-audio`, `extract-spots`, `geocode-spots`, `export-data`)
+- `scraper/cmd/scrape` provides unified stage subcommands (`init`, `collect-article-urls`, `fetch-articles`, `extract-spots-gemini-direct`, `geocode-spots`, `export-data`)
 - Pipeline internals use explicit layering: **CLI → stage service → adapter**
 - Stage-first packages live under `scraper/internal/pipeline/<stage>` and own stage DTOs, ports, service logic, and adapters
-- Reusable capabilities live in explicit packages (for example `internal/audio`, `internal/contentfetch`, `internal/articletext`, `internal/transcription`, `internal/geocoder`, `internal/extraction`)
+- Reusable capabilities live in explicit packages (for example `internal/contentfetch`, `internal/geminidirect`, `internal/geocoder`)
 - Shared cross-stage helpers live under `scraper/internal/pipeline/common` and must stay domain-agnostic
 - `scraper/internal/scraper` is deprecated for new business logic
 - `export-data` reads SQLite and writes frontend JSON
