@@ -44,20 +44,22 @@ go run ./cmd/scrape <stage> --help
 # Preflight env + schema init (fails fast on missing required API keys)
 go run ./cmd/scrape init --db-path ../data/spots.db --reset
 
-# SQLite-first stages
+# Current Gemini-first SQLite stages
 go run ./cmd/scrape collect-article-urls --io sqlite --db-path ../data/spots.db --article-url "<FCCENTRUM_ARTICLE_URL>"
 go run ./cmd/scrape fetch-articles --io sqlite --db-path ../data/spots.db
-go run ./cmd/scrape extract-article-text --io sqlite --db-path ../data/spots.db
-go run ./cmd/scrape acquire-audio --io sqlite --db-path ../data/spots.db
-go run ./cmd/scrape transcribe-audio --io sqlite --db-path ../data/spots.db --language nl
-go run ./cmd/scrape extract-spots --io sqlite --db-path ../data/spots.db --out-dir ../data
+# To regenerate Gemini-derived data while preserving fetched article sources:
+go run ./cmd/scrape init --db-path ../data/spots.db --reset-gemini-derived
+# Prompt/raw/parsed artifacts are written as deterministic diagnostics.
+# Existing parsed artifacts are reused; add --force to regenerate and call Gemini again.
+go run ./cmd/scrape extract-spots-gemini-direct --io sqlite --db-path ../data/spots.db --out-dir ../data/gemini-direct --model gemini-3.1-pro-preview
 go run ./cmd/scrape geocode-spots --io sqlite --db-path ../data/spots.db
 
 # Optional file-mode geocode input path
-go run ./cmd/scrape geocode-spots --io file --in ../data/stages/extract-spots/<identity>__extract-spots__candidates.json
+go run ./cmd/scrape geocode-spots --io file --in ../data/stages/geocode-input/<identity>.json
 
 # Export smoke test (can succeed even with null payload during scaffold phase)
-go run ./cmd/scrape export-data --io sqlite --db-path ../data/spots.db --out ../viz/public/data/spots.json
+go run ./cmd/scrape export-data --io sqlite --db-path ../data/spots.db --out ../viz/public/data/spots.json --spot-source gemini-direct
+
 ```
 
 ### Stage mode support matrix
@@ -67,10 +69,7 @@ go run ./cmd/scrape export-data --io sqlite --db-path ../data/spots.db --out ../
 | `init` | Supported | Not supported (error) |
 | `collect-article-urls` | Supported | Not implemented (error; use sqlite) |
 | `fetch-articles` | Supported | Not implemented (error; use sqlite) |
-| `extract-article-text` | Supported | Not implemented (error; use sqlite) |
-| `acquire-audio` | Supported | Not implemented (error; use sqlite) |
-| `transcribe-audio` | Supported | Not implemented (error; use sqlite) |
-| `extract-spots` | Supported | Not implemented (error; use sqlite) |
+| `extract-spots-gemini-direct` | Supported | Not implemented (error; use sqlite) |
 | `geocode-spots` | Supported | Supported |
 | `export-data` | Supported | Not implemented (error; use sqlite) |
 

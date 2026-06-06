@@ -1,9 +1,4 @@
-# scraper-relational-schema-v2 Specification
-
-## Purpose
-Define the current Gemini-first SQLite relational schema used by the scraper pipeline.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Scraper SQLite schema SHALL be rebuilt as Gemini-first relational schema
 The system SHALL initialize a SQLite schema with normalized relational tables for article sources, article fetches, presenters, Gemini-direct spot mentions, Gemini-direct geocodes, Gemini-direct article links, and Gemini-direct spot corrections. The schema SHALL NOT create legacy transcription-path extraction tables.
@@ -31,3 +26,9 @@ The schema SHALL keep one latest successful geocode row per `gemini_direct_spot_
 - **WHEN** `geocode-spots` reruns for a previously geocoded Gemini mention
 - **THEN** the single `gemini_direct_spot_google_geocodes` row for that mention SHALL be updated/upserted
 - **AND** no separate retry history rows SHALL be created
+
+## REMOVED Requirements
+
+### Requirement: Cleaned article text SHALL be persisted as one row per fetch
+**Reason**: Cleaned article text was only required by the legacy transcript-based extraction path. Gemini-direct extraction uses the article URL and YouTube URL as source inputs.
+**Migration**: Stop creating and consuming `article_texts`; retain `article_fetches` for article metadata and YouTube URL extraction/fallbacks.
