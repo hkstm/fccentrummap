@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
 
 	"github.com/hkstm/fccentrummap/internal/models"
@@ -195,6 +196,40 @@ func TestGeminiDirectExportOrdersSpotsChronologically(t *testing.T) {
 	}
 	if len(data.Spots) != 2 || data.Spots[0].ArticleURL != "https://example.com/older" || data.Spots[1].ArticleURL != "https://example.com/newer" {
 		t.Fatalf("spots should export oldest-to-newest so newest is last/highest z-index: %+v", data.Spots)
+	}
+}
+
+func TestGetGeminiDirectSpotCorrectionTargetScansSourceAndCorrectionValues(t *testing.T) {
+	repo := newTestRepo(t)
+	sourceID, err := repo.UpsertArticleSource("https://example.com/correct-target")
+	if err != nil {
+		t.Fatalf("UpsertArticleSource: %v", err)
+	}
+	presenterID, err := repo.UpsertPresenter("Presenter")
+	if err != nil {
+		t.Fatalf("UpsertPresenter: %v", err)
+	}
+	if err := repo.LinkArticlePresenter(sourceID, presenterID); err != nil {
+		t.Fatalf("LinkArticlePresenter: %v", err)
+	}
+	ts := 207.0
+	mentionID, err := repo.UpsertGeminiDirectSpotMention(GeminiDirectSpotMentionInput{ArticleSourceID: sourceID, ArticleURL: "https://example.com/correct-target", YouTubeURL: "https://youtube.com/watch?v=abc", Place: "Original Spot", YouTubeTimestampSeconds: &ts})
+	if err != nil {
+		t.Fatalf("UpsertGeminiDirectSpotMention: %v", err)
+	}
+	placeID := "original-place"
+	formatted := "Amsterdam"
+	if _, err := repo.UpsertSpotGoogleGeocodeAndLinkArticleSpotForSource(models.SpotSourceGeminiDirect, mentionID, &placeID, 52.1, 4.1, &formatted, "ok", sourceID, PlaceTypeMetadata{}); err != nil {
+		t.Fatalf("geocode: %v", err)
+	}
+
+	spotID := fmt.Sprintf("%d:%d", sourceID, mentionID)
+	target, err := repo.GetSpotCorrectionTargetForSource(models.SpotSourceGeminiDirect, spotID)
+	if err != nil {
+		t.Fatalf("GetSpotCorrectionTargetForSource: %v", err)
+	}
+	if target == nil || target.SpotID != spotID || target.SourceSpotName != "Original Spot" || target.PresenterName != "Presenter" || target.SourceYouTubeTimestampSecs == nil || *target.SourceYouTubeTimestampSecs != 207 {
+		t.Fatalf("target = %+v", target)
 	}
 }
 
