@@ -108,6 +108,9 @@ func TestResolvePlaceInput(t *testing.T) {
 			}
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"id":"ChIJabc","displayName":{"text":"Place"},"primaryType":"cafe","primaryTypeDisplayName":{"text":"Café"},"location":{"latitude":52.3,"longitude":4.9}}`))
+		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "ChIJWTOQdOoJxkcRbp9D3FnPSoA"):
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"id":"ChIJWTOQdOoJxkcRbp9D3FnPSoA","displayName":{"text":"Ministry"},"location":{"latitude":52.3666158,"longitude":4.8896954}}`))
 		default:
 			t.Fatalf("unexpected request %s %s", r.Method, r.URL.String())
 		}
@@ -122,6 +125,14 @@ func TestResolvePlaceInput(t *testing.T) {
 	}
 	if fromURL.PlaceID != "ChIJaddress" || fromURL.Latitude != 52.3580636 || fromURL.Longitude != 4.8742068 {
 		t.Fatalf("unexpected maps URL coords %+v", fromURL)
+	}
+
+	fromFeatureTokenURL, err := g.ResolvePlaceInput(context.Background(), srv.URL+"/maps/place/Ministry/@52.3666158,4.8896954,17z/data=!3m1!4b1!4m6!3m5!1s0x47c609ea74903359:0x804acf59dc439f6e!8m2!3d52.3666158!4d4.8896954!16s%2Fg%2F11fmtm4td0")
+	if err != nil {
+		t.Fatalf("ResolvePlaceInput(feature token URL): %v", err)
+	}
+	if fromFeatureTokenURL.PlaceID != "ChIJWTOQdOoJxkcRbp9D3FnPSoA" || fromFeatureTokenURL.Latitude != 52.3666158 || fromFeatureTokenURL.Longitude != 4.8896954 {
+		t.Fatalf("unexpected feature token URL coords %+v", fromFeatureTokenURL)
 	}
 
 	fromID, err := g.ResolvePlaceInput(context.Background(), "ChIJabc")
@@ -145,6 +156,9 @@ func TestExtractPlaceInputFromMapsURL(t *testing.T) {
 	}
 	if got, ok := extractPlaceIDFromMapsURL("https://www.google.com/maps?q=place_id:ChIJabc"); !ok || got != "ChIJabc" {
 		t.Fatalf("unexpected q place ID %q ok=%v", got, ok)
+	}
+	if got, ok := extractPlaceIDFromMapsFeatureToken("https://www.google.com/maps/place/Ministry/@52.3666158,4.8896954,17z/data=!3m1!4b1!4m6!3m5!1s0x47c609ea74903359:0x804acf59dc439f6e!8m2!3d52.3666158!4d4.8896954"); !ok || got != "ChIJWTOQdOoJxkcRbp9D3FnPSoA" {
+		t.Fatalf("unexpected feature token place ID %q ok=%v", got, ok)
 	}
 }
 
