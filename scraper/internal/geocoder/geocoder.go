@@ -3,6 +3,8 @@ package geocoder
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -148,8 +151,8 @@ func (g *Geocoder) ResolvePlaceInput(ctx context.Context, input string) (*Coordi
 		if placeID, ok := extractPlaceIDFromMapsURL(value); ok {
 			return g.LookupPlaceIDCoordinates(ctx, placeID)
 		}
-		if query, ok := extractPlaceQueryFromMapsURL(value); ok {
-			return g.GeocodePlace(ctx, query)
+		if placeID, ok := extractPlaceIDFromMapsFeatureToken(value); ok {
+			return g.LookupPlaceIDCoordinates(ctx, placeID)
 		}
 
 		resolved := value
@@ -158,6 +161,12 @@ func (g *Geocoder) ResolvePlaceInput(ctx context.Context, input string) (*Coordi
 		}
 		if placeID, ok := extractPlaceIDFromMapsURL(resolved); ok {
 			return g.LookupPlaceIDCoordinates(ctx, placeID)
+		}
+		if placeID, ok := extractPlaceIDFromMapsFeatureToken(resolved); ok {
+			return g.LookupPlaceIDCoordinates(ctx, placeID)
+		}
+		if query, ok := extractPlaceQueryFromMapsURL(value); ok {
+			return g.GeocodePlace(ctx, query)
 		}
 		if query, ok := extractPlaceQueryFromMapsURL(resolved); ok {
 			return g.GeocodePlace(ctx, query)
@@ -208,6 +217,48 @@ func extractPlaceIDFromMapsURL(rawURL string) (string, bool) {
 		return strings.TrimSpace(strings.TrimPrefix(q, "place_id:")), true
 	}
 	return "", false
+}
+
+var mapsFeatureTokenPattern = regexp.MustCompile(`1s(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)`)
+
+func extractPlaceIDFromMapsFeatureToken(rawURL string) (string, bool) {
+	token := mapsFeatureTokenPattern.FindStringSubmatch(rawURL)
+	if len(token) < 2 {
+		return "", false
+	}
+	placeID, err := decodeMapsFeatureTokenToPlaceID(token[1])
+	if err != nil {
+		return "", false
+	}
+	return placeID, true
+}
+
+func decodeMapsFeatureTokenToPlaceID(token string) (string, error) {
+	parts := strings.Split(token, ":")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("invalid maps feature token %q", token)
+	}
+
+	hex1 := strings.TrimPrefix(parts[0], "0x")
+	hex2 := strings.TrimPrefix(parts[1], "0x")
+
+	var machineID, featureID uint64
+	if _, err := fmt.Sscanf(hex1, "%x", &machineID); err != nil {
+		return "", err
+	}
+	if _, err := fmt.Sscanf(hex2, "%x", &featureID); err != nil {
+		return "", err
+	}
+
+	buf := make([]byte, 20)
+	buf[0] = 0x0A
+	buf[1] = 0x12
+	buf[2] = 0x09
+	binary.LittleEndian.PutUint64(buf[3:11], machineID)
+	buf[11] = 0x11
+	binary.LittleEndian.PutUint64(buf[12:20], featureID)
+
+	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(buf), nil
 }
 
 func extractPlaceQueryFromMapsURL(rawURL string) (string, bool) {
